@@ -8,18 +8,41 @@ A command line tool that allows to run Google Lighthouse and Mozilla Observatory
 ## Usage
 *&lt;url&gt;* is required, options are....optional
 
-`audit <url> [options]`
-`audit http://localhost:3030 --verbose`
-`audit http://google.com`
-`audit http://localhost:8888 --verbose --only=lighthouse`
-`audit http://instagram.com --verbose --only=observatory`
-`audit http://localhost:3000 --only=lighthouse`
-`audit http://facebook.com --only=observatory`
+<pre>
+audit <url> [options]
+</pre>
+
+<pre>
+audit http://localhost:3030 --verbose
+</pre>
+
+<pre>
+audit http://google.com
+</pre>
+
+<pre>
+audit http://localhost:8888 --verbose --only=lighthouse
+</pre>
+
+<pre>
+audit http://instagram.com --verbose --only=observatory
+</pre>
+
+<pre>
+audit http://localhost:3000 --only=lighthouse
+</pre>
+
+<pre>
+audit http://facebook.com --only=observatory
+</pre>
 
 ### Options
 
-`--verbose`: Output detailed logs of the current stage of the lighthouse test
-`--only=[lighthouse|observatory]`: `--only=lighthouse` will only run the lighthouse test and not the mozilla observatory security test and `--only=observatory` will only run the mozilla observatory security test
+#### --verbose
+Output detailed logs of the current stage of the lighthouse test
+
+#### --only=[lighthouse|observatory]
+`--only=lighthouse` will only run the lighthouse test and not the mozilla observatory security test and `--only=observatory` will only run the mozilla observatory security test
 
 ## The License
 
