@@ -9,15 +9,16 @@
     "type": "git",
     "url": "https://github.com/ekdevdes/audit-cli.git"
   },
+  "dependencies": {
+    "chalk": "^2.3.0",
+    "jsdom": "^11.5.1",
+    "shell-exec": "^1.0.0",
+    "yargs": "^10.0.3"
+  },
   "scripts": {
     "preinstall": "npm i -g observatory-cli lighthouse"
   },
   "bin": {
-    "audit": "./index.js"
-  },
-  "dependencies": {
-    "jsdom": "^11.5.1",
-    "shell-exec": "^1.0.0",
-    "yargs": "^10.0.3"
+    "report": "./index.js"
   }
 }

@@ -9,31 +9,31 @@ A command line tool that allows to run Google Lighthouse and Mozilla Observatory
 *&lt;url&gt;* is required, options are....well, optional.
 
 <pre>
-audit &lt;url&gt; [options]
+report &lt;url&gt; [options]
 </pre>
 
 <pre>
-audit http://localhost:3030 --verbose
+report http://localhost:3030 --verbose
 </pre>
 
 <pre>
-audit http://google.com
+report http://google.com
 </pre>
 
 <pre>
-audit http://localhost:8888 --verbose --only=lighthouse
+report http://localhost:8888 --verbose --only=lighthouse
 </pre>
 
 <pre>
-audit http://instagram.com --verbose --only=observatory
+report http://instagram.com --verbose --only=observatory
 </pre>
 
 <pre>
-audit http://localhost:3000 --only=lighthouse
+report http://localhost:3000 --only=lighthouse
 </pre>
 
 <pre>
-audit http://facebook.com --only=observatory
+report http://facebook.com --only=observatory
 </pre>
 
 ### Options

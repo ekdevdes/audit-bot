@@ -1,1 +1,8 @@
-audit-test.js
+.editorconfig
+.jshintrc
+.travis.yml
+.babelrc
+.idea/
+.vscode/
+test/
+.github/
