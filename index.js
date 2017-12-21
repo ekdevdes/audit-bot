@@ -223,6 +223,9 @@ shellExec(lighthouseCommand).then(() => {
     /** Output the notes to the console now that we've gathered all of them into one string */
     console.log(`${notes}\n`);
 
+    /**
+     * Get the result of the "no-vulnerable-libraries" audit under the "Best Practices" section
+     */
     let vulnerabilities = parsedJSON.reportCategories[3].audits[9].result;
 
     /** If there are in fact vulnerable JS libraries in the passed in site let the user now */
