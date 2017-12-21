@@ -6,7 +6,7 @@ A command line tool that allows to run Google Lighthouse and Mozilla Observatory
 `npm i -g audit-cmd`
 
 ## Usage
-*&lt;url&gt;* is required, options are....optional
+*&lt;url&gt;* is required, options are....well, optional.
 
 <pre>
 audit &lt;url&gt; [options]
