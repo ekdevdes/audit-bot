@@ -4,6 +4,7 @@
  * Notes:
  * 
  * Local urls don't work for observatory. 
+ * As its working currently the report.html file is going into the directory they run the command from
  * 
  * TODO: Add the ability for a user to have a report.json file in the root of their project (optional)
  * that when present would read the local, prod and test urls from so instead of having to pass the local, test
@@ -15,15 +16,12 @@
  * you are to them. If not possible to output in terminal maybe the web test results link will have it and
  * I can point the user to it
  * 
- * TODO: Reformat the lighthouse test results to look more like observatory test results
  * TODO: Add in help docs
  * TODO: Make the "only" option respected
  * TODO: Add an error message if no url is passed in
- * TODO: Improve the formatting of the url passed to observatory got this error when passing in https://www.google.com/:
- * 
- * [ERROR] Unable to get result. Host:www.google.com/ Error:invalid-hostname.
- * 
  * TODO: Format the observatory results like the lighthouse results with the different colored scores
+ * TODO: add an a unique identifier to the end of the report.html file name so its report-xyz.html so you can run the 
+ * command over and over again in the same directory and have all the reports seperate, not overwriting each other
  */
 
 const fs = require("fs");
@@ -70,15 +68,19 @@ const argv = require('yargs').argv;
 // -----------------------------------------------
 
 /**
- * Gather the raw url passed into the commmand and the url without the protocol into
- * one object to use later. Lighthouse doesn't care if the url has a protocol but observatory
- * doesn't like when the url has a protocol
+ * Gather the raw url passed into the commmand and the url without the protocol into one object 
+ * to use later. Lighthouse doesn't care if the url has a protocol or a "www" subdomain but observatory does...
  * 
+ * @var {string} theURL
+ * @var {string} noProtoURL
  * @var {object} url
  */
+const theURL = argv._[0],
+      noProtoURL = theURL.split("//")[1];
+
 const url = {
-    raw: argv._[0],
-    noProto: argv._[0].split("//")[1]
+    raw: theURL,
+    noProto: (noProtoURL.includes("www")) ? noProtoURL.split("www.")[1].replace("/", "") : noProtoURL.replace("/", "")
 };
 
 /**
@@ -195,9 +197,9 @@ shellExec(lighthouseCommand).then(() => {
 
         /**
          * The scores for each category include decimal values, we don't really need 
-         * to be that precise, so we're rounding down to the closes whole number
+         * to be that precise, so we're rounding up to the closes whole number
          */
-        let score = Math.floor(el.score);
+        let score = Math.ceil(el.score);
 
         if(el.score >= ratings.pass) {
 
@@ -235,7 +237,7 @@ shellExec(lighthouseCommand).then(() => {
         console.log(`${chalk.blue.bold("Library Version")}\t${chalk.blue.bold("Vulnerability Count")}\t${chalk.blue.bold("Highest Severity")}\t${chalk.blue.bold("Url")}`);
         
         vulnerabilities.extendedInfo.jsLibs.forEach(el => {
-            console.log(`${el.detectedLib.text}\t${el.vulnCount}\t\t\t${el.highestSeverity}\t\t\t${el.pkgLink}`);
+            console.log(`${el.name}@${el.version}\t${el.vulnCount}\t\t\t${el.highestSeverity}\t\t\t${el.pkgLink}`);
         });
 
         /**
