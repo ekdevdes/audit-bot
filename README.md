@@ -9,7 +9,7 @@ A command line tool that allows to run Google Lighthouse and Mozilla Observatory
 *&lt;url&gt;* is required, options are....optional
 
 <pre>
-audit <url> [options]
+audit &lt;url&gt; [options]
 </pre>
 
 <pre>
