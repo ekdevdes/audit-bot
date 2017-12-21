@@ -29,7 +29,7 @@ report http://instagram.com --verbose --only=observatory
 </pre>
 
 <pre>
-report http://localhost:3000 --only=lighthouse
+report http://example.localhost.com:3000 --only=lighthouse
 </pre>
 
 <pre>

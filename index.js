@@ -19,6 +19,11 @@
  * TODO: Add in help docs
  * TODO: Make the "only" option respected
  * TODO: Add an error message if no url is passed in
+ * TODO: Improve the formatting of the url passed to observatory got this error when passing in https://www.google.com/:
+ * 
+ * [ERROR] Unable to get result. Host:www.google.com/ Error:invalid-hostname.
+ * 
+ * TODO: Format the observatory results like the lighthouse results with the different colored scores
  */
 
 const fs = require("fs");
@@ -94,17 +99,28 @@ if(argv.verbose) {
     lighthouseCommand = `lighthouse ${url.raw} --chrome-flags="--headless" --output=html --output-path=./report.html`;
 }
 
-// if we don't care about verbose output give the user some feedback that we are doing something
-// its just that the lighthouse report will take a second or two to come back
-//
-// maaybe we can have a dot added to the end of this string every second? and it start with one dot
-
 /**
  * If we don't care about verbose output give the user some feedback that we are doing something and
  * its just taking lighthouse a good few seconds to come back with the result
  */
+let interval;
+
 if(!argv.verbose) {
-    console.log("Running through lighthouse tests. A few seconds please...");
+
+    /**
+     * Logging the message this way allows us to append a "." to the end of the message for each half second the
+     * user waits for
+     */
+    let msg = "Running through tests. A few seconds please.";
+
+    console.log(msg);
+
+    interval = setInterval(() => {
+        msg = `${msg}.`;
+
+        console.clear();
+        console.log(msg);
+    }, 500);
 }
 
 /**
@@ -117,6 +133,8 @@ shellExec(lighthouseCommand).then(() => {
    * the lighthouse test results since we have the resuls now
    */
   if(!argv.verbose){
+    /** Invalidate the interval/timer */
+    clearInterval(interval);
     console.clear();
   }
 
@@ -168,27 +186,65 @@ shellExec(lighthouseCommand).then(() => {
     /**
      * Logging the results of the lighthouse test
      */
-    console.log(`${chalk.blue.bold("Google Lighthouse Report")}: ${parsedJSON.url}\n`);
+    let notes = `\n${chalk.blue.bold("Notes:")}\n`;
+
+    console.log(`${chalk.blue.bold("Google Lighthouse Report")}: ${parsedJSON.url}\nAll scores are out of 100.\n`);
+    console.log(`${chalk.blue.bold("Score\tMetric")}`);
+
     parsedJSON.reportCategories.forEach(el => {
 
         /**
          * The scores for each category include decimal values, we don't really need 
          * to be that precise, so we're rounding down to the closes whole number
          */
-        console.log(`${el.name}: ${Math.floor(el.score)}/100`);
+        let score = Math.floor(el.score);
+
+        if(el.score >= ratings.pass) {
+
+            /** Highlight passing scores green and bold */
+            score = chalk.green.bold(score);
+
+        } else if(el.score > ratings.fail && el.score <= ratings.pass) {
+
+            /** Highlight average scores yellow and bold */
+            score = chalk.yellow.bold(score);
+            notes = `${notes}* Your score for the "${el.name}" metric needs improvment, please consult the report.html file generated for a detailed breakdown on what to improve.\n`;
+
+        } else if(el.score <= ratings.fail) {
+            
+            /** Highlight failing scores red and bold */
+            score = chalk.red.bold(score);
+            notes = `${notes}* Your score for the "${el.name}" metric is poor, please consult the report.html file generated for a detailed breakdown on how to improve it.\n`;
+        }
+
+        console.log(`${score}\t${el.name}`);
     });
-    
-    /**
-     * TODO: make this dynamic based on teh scores of each section
-     * TODO: add in what js libs you're using that have vulnerabilities
-     * TODO: add in common solutions to some of the things they may have wrong like "Offscreen images"
-     * and how to fix that just make your images only as big as they are going to be used in the html
-     */
-    console.log(`\n${chalk.blue.bold("Notes:")}\nYour scores for the \"Progressive Web App\" and \"Best Practices\" tests are poor. Consult /Users/ethankramer/Desktop/report.html for more information on how to improve these scores.\n\nMozilla Observatory Security Test Results:`);
+
+    /** Output the notes to the console now that we've gathered all of them into one string */
+    console.log(`${notes}\n`);
+
+    let vulnerabilities = parsedJSON.reportCategories[3].audits[9].result;
+
+    /** If there are in fact vulnerable JS libraries in the passed in site let the user now */
+    if(!vulnerabilities.score) {
+        console.log(`${chalk.blue.bold("Included front-end JavaScript libraries with known security vulnerabilities:")}\n`);
+        console.log(vulnerabilities.displayValue + "\n");
+        console.log(`${chalk.blue.bold("Library Version")}\t${chalk.blue.bold("Vulnerability Count")}\t${chalk.blue.bold("Highest Severity")}\t${chalk.blue.bold("Url")}`);
+        
+        vulnerabilities.extendedInfo.jsLibs.forEach(el => {
+            console.log(`${el.detectedLib.text}\t${el.vulnCount}\t\t\t${el.highestSeverity}\t\t\t${el.pkgLink}`);
+        });
+
+        /**
+         * Add an extra line between the end our vulnerabilities table and the beginning of the observatory results
+         */
+        console.log("\n");
+    }
 
     /**
      * Run the observatory report
      */
+    console.log(chalk.blue.bold("Mozilla Observatory Security Report"));
     shellExec(`observatory ${url.noProto} --format=report`);
   });
 
