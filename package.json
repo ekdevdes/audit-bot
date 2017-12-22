@@ -12,6 +12,7 @@
   "dependencies": {
     "chalk": "^2.3.0",
     "jsdom": "^11.5.1",
+    "ora": "^1.3.0",
     "shell-exec": "^1.0.0",
     "yargs": "^10.0.3"
   },
@@ -19,6 +20,6 @@
     "preinstall": "npm i -g observatory-cli lighthouse"
   },
   "bin": {
-    "report": "./index.js"
+    "report": "./src/index.js"
   }
 }
