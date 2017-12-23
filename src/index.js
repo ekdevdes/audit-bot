@@ -11,6 +11,9 @@
  /**
   * TODOS
   *
+  * TODO: Change the "false" or "true" in the "Pass or Fail" column of the observatory test result to a 
+  * red "X" or green checkmark
+  * 
   * TODO: write the tests.run.all function that just does a lighthouse test, then observatory test
   *
   * TODO: Format the tables in the output better, maybe theres a node module that can help with that
@@ -19,8 +22,27 @@
   *
   * TODO: fix the bugs with the js vulnerabilities table documented in the "debug_screenshots/" folder
   *
-  * TODO: add an a unique identifier to the end of the report.html file name so its report-xyz.html so you can run the
-  * command over and over again in the same directory and have all the reports seperate, not overwriting each other 
+  * TODO: To allow the user to run the command over and over again without having the previous report.html file
+  * overwrite the current "report.html" file change the name of the file to "report-{unix-time-stamp-of-time-of-request}}.html".
+  * e.g. report-18928393.html.
+  *
+  * TODO: add the ability to have a report.json inside of the current directory with keys for "local", "test" and "prod"
+  * so you can just run "report -l" or "report --local" or "report -t" or "report --test" or "report -p" or "report --prod"
+  * and not have to specify a url. And then document this in the command help output and the README
+  *
+  * TODO: Add the ability to save the terminal output to a pdf file with a "--file" or "-f" option which by default will save 
+  * the PDF to the directory the command is being run from but you can pass in an argument of where you want the pdf file to
+  * be outputted to instead. When the -f option is passed in a folder will be created (will have to have a unique name) with the
+  * lighthouse report html and the wholisitic report pdf. Maybe if a -z or "--zip" option is passed in then it will zip the folder
+  * and delete the original folder so you only have the zip file. That would be great for when this commmand is run as a cron job
+  * on a server. Make the filename of the pdf report-{unix-time-stamp-of-time-of-request}.pdf, this will solve the problem
+  * that could occur by calling "report -pf" without passing in a file path to save the pdf to multiple times and the the previous
+  * pdf getting overwritten by the new pdf. E.g. report-18383039.pdf.
+  *
+  * TODO: Make observatory tests run on localhost urls (urls containing "localhost") output an error saying that
+  * observatory does not support localhost urls. When running both lighthouse and observatory with a localhost url 
+  * tests at the same time output a yellow warning saying that observatory tests will not be ran because observatory
+  * does not support localhost urls
   */
 
 /**

@@ -205,8 +205,8 @@ module.exports = {
 
             spinner.start();
 
-            shellExec(`observatory ${url} --format=json &>report.json`).then(() => {
-                fs.readFile("report.json", "utf8", (err, data) => {
+            shellExec(`observatory ${url} --format=json &>report-observatory.json`).then(() => {
+                fs.readFile("report-observatory.json", "utf8", (err, data) => {
                     if(err) {
                         console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
                     }
@@ -221,7 +221,7 @@ module.exports = {
                             spinner.stop().clear();
                             
                             /** Start the reading of the json file of the results of the observatory test */
-                            fs.readFile("report.json", "utf8", (err, data) => {
+                            fs.readFile("report-observatory.json", "utf8", (err, data) => {
                                 if(err) {
                                     console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
                                 }
@@ -264,7 +264,7 @@ module.exports = {
                                     /**
                                      * Remove the generated files since we don't need them anymore
                                      */
-                                    shellExec("rm -rf report.json report.txt");
+                                    shellExec("rm -rf report-observatory.json report.txt");
                                 });
                             });
                         }); 
