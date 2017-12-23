@@ -20,10 +20,10 @@
   *     https://www.npmjs.com/package/cli-table - this module can help with the formatting of the tables
   *     And it uses https://github.com/marak/colors.js for text colors
   *
-  * TODO: fix the bugs with the js vulnerabilities table documented in the "debug_screenshots/" folder
+  * TODO: fix the bugs with the js vulnerabilities table
   *
   * TODO: To allow the user to run the command over and over again without having the previous report.html file
-  * overwrite the current "report.html" file change the name of the file to "report-{unix-time-stamp-of-time-of-request}}.html".
+  * overwrite the current "report.html" file change the name of the file to "report-{unix-time-stamp-of-time-of-request}.html".
   * e.g. report-18928393.html.
   *
   * TODO: add the ability to have a report.json inside of the current directory with keys for "local", "test" and "prod"
@@ -33,7 +33,7 @@
   * TODO: Add the ability to save the terminal output to a pdf file with a "--file" or "-f" option which by default will save 
   * the PDF to the directory the command is being run from but you can pass in an argument of where you want the pdf file to
   * be outputted to instead. When the -f option is passed in a folder will be created (will have to have a unique name) with the
-  * lighthouse report html and the wholisitic report pdf. Maybe if a -z or "--zip" option is passed in then it will zip the folder
+  * lighthouse report html and the holisitic report pdf. Maybe if a -z or "--zip" option is passed in then it will zip the folder
   * and delete the original folder so you only have the zip file. That would be great for when this commmand is run as a cron job
   * on a server. Make the filename of the pdf report-{unix-time-stamp-of-time-of-request}.pdf, this will solve the problem
   * that could occur by calling "report -pf" without passing in a file path to save the pdf to multiple times and the the previous
