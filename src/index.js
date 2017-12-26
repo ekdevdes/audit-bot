@@ -10,25 +10,8 @@
 
  /**
   * TODOS
-  *
-  * TODO: Change the "false" or "true" in the "Pass or Fail" column of the observatory test result to a 
-  * red "X" or green checkmark
   * 
   * TODO: write the tests.run.all function that just does a lighthouse test, then observatory test
-  *
-  * TODO: Format the tables in the output better, maybe theres a node module that can help with that
-  *     https://www.npmjs.com/package/cli-table - this module can help with the formatting of the tables
-  *     And it uses https://github.com/marak/colors.js for text colors
-  *
-  * TODO: fix the bugs with the js vulnerabilities table
-  *
-  * TODO: To allow the user to run the command over and over again without having the previous report.html file
-  * overwrite the current "report.html" file change the name of the file to "report-{unix-time-stamp-of-time-of-request}.html".
-  * e.g. report-18928393.html.
-  *
-  * TODO: add the ability to have a report.json inside of the current directory with keys for "local", "test" and "prod"
-  * so you can just run "report -l" or "report --local" or "report -t" or "report --test" or "report -p" or "report --prod"
-  * and not have to specify a url. And then document this in the command help output and the README
   *
   * TODO: Add the ability to save the terminal output to a pdf file with a "--file" or "-f" option which by default will save 
   * the PDF to the directory the command is being run from but you can pass in an argument of where you want the pdf file to
@@ -36,7 +19,7 @@
   * lighthouse report html and the holisitic report pdf. Maybe if a -z or "--zip" option is passed in then it will zip the folder
   * and delete the original folder so you only have the zip file. That would be great for when this commmand is run as a cron job
   * on a server. Make the filename of the pdf report-{unix-time-stamp-of-time-of-request}.pdf, this will solve the problem
-  * that could occur by calling "report -pf" without passing in a file path to save the pdf to multiple times and the the previous
+  * that could occur by calling "report <url> -f" without passing in a file path to save the pdf to multiple times and the the previous
   * pdf getting overwritten by the new pdf. E.g. report-18383039.pdf.
   *
   * TODO: Make observatory tests run on localhost urls (urls containing "localhost") output an error saying that
@@ -77,10 +60,18 @@ const argv = require('yargs')
   })
   .example("$0 http://localhost:3030 --verbose", "Runs a lighthouse test on localhost. Localhost urls don't work with observatory. Using the verbose output option described above.")
   .example("$0 https://example.com -v", "Runs a lighthouse and observatory security test on example.com. Localhost urls don't work with observatory. Using the verbose output option described above.")
-  .example("$0 https://internet.example.com -only=observatory", "Runs only a observatory security test on internet.example.com. Without using verbose output.")
+  .example("$0 https://internet.example.com --only=observatory", "Runs only a observatory security test on internet.example.com. Without using verbose output.")
   .example("$0 http://example.localhost.com -o lighthouse", "Runs only a lighthouse test on exaple.localhost.com. Without using verbose output.")
   .example("$0 https://amazing.io -vo lighthouse", "Runs only a lighthouse test on amazing.io, using verbose output.")
   .argv;
+
+/**
+ * The library we're using to execute the "lighthouse" and "observatory" cli commands from node
+ * 
+ * @var {function} shellExec
+ * @see https://www.npmjs.com/package/shell-exec
+ */
+const shellExec = require("shell-exec");
 
 const tests = require("./tests");
 
@@ -88,15 +79,46 @@ const url = argv._[0] || "";
 const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/g;
 const isURLValid = url.match(urlRegex);
 
+/**
+ * An array of non valid options passed into the command 
+ * 
+ * @var {array} nonValidOptions
+ */
+let nonValidOptions = [];
+
+/**
+ * map through the argv object that has the list of potential options for the command
+ * and the actual passed in option and create an array of keys that aren't help, only or verbose
+ * save them to an array and if that array is not empty we have passed in an invalid option
+ */
+Object.keys(argv).map(key => {
+    const standardKeys = ["_", "$0", "version", "help"];
+    const customOptions = ["v", "o", "verbose", "only"];
+
+    if(!standardKeys.includes(key) && !customOptions.includes(key)) {
+        nonValidOptions.push(key);
+    }
+});
+
+/** If we have any invalid options that were passed into the command error out */
+if(nonValidOptions.length > 0) {
+    const optsMsg = nonValidOptions.map(opt => `"${opt}"`).join(", ");
+    const optsMsgEnding = (nonValidOptions.length > 1) ? "are not valid options" : "is not a valid option";
+
+    console.log(chalk.bgRed.white.bold(`[ERROR] ${optsMsg} ${optsMsgEnding}.\n`));
+    shellExec(`${argv["$0"]} --help`);
+    return;
+}
+
 /** A url was passed in to the command is a valid url */
 if(url && isURLValid) {
     const urlMatches = urlRegex.exec(url);
-    const noProtoURL = urlMatches[0].split("//")[1];
+    const domainOnlyURL = urlMatches[0].split("//")[1].split("/")[0];
 
     if(argv.only && argv.only === "lighthouse") {
         tests.run.lighthouse(argv, url);
     } else if(argv.only && argv.only === "observatory") {
-        tests.run.observatory(argv, noProtoURL);
+        tests.run.observatory(argv, domainOnlyURL);
     } else {
 
         // tests.run.all will have to split the url itself

@@ -34,6 +34,10 @@ const chalk = require("chalk");
  */
 const ora = require("ora");
 
+const easyTable = require("easy-table");
+
+const unix = require("to-unix-timestamp");
+
 module.exports = {
     run: {
         /**
@@ -54,11 +58,13 @@ module.exports = {
                 fail: 69
             }
 
-            let lighthouseCommand = `lighthouse ${url} --chrome-flags="--headless" --quiet --output=html --output-path=./report.html`;
+            const unixTimeStamp = unix(new Date());
+
+            let lighthouseCommand = `lighthouse ${url} --chrome-flags="--headless" --quiet --output=html --output-path=./report-${unixTimeStamp}.html`;
 
             /** Show the log from the lighthouse command if --verbose is passed in */
             if(args.verbose) {
-                lighthouseCommand = `lighthouse ${url} --chrome-flags="--headless" --output=html --output-path=./report.html`;
+                lighthouseCommand = `lighthouse ${url} --chrome-flags="--headless" --output=html --output-path=./report-${unixTimeStamp}.html`;
             }
 
             const spinner = ora({
@@ -87,7 +93,7 @@ module.exports = {
                  * are saved in a script tag at the bottom of the <body> of the html of the report so we're just invoking an 
                  * instance of JSDOM to parse that JSON so we can pull out the info we need.
                  */
-                fs.readFile("report.html", "utf8", (err, contents) => {
+                fs.readFile(`report-${unixTimeStamp}.html`, "utf8", (err, contents) => {
 
                     if(err) {
                         console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
@@ -125,10 +131,10 @@ module.exports = {
                     /**
                      * Logging the results of the lighthouse test
                      */
-                    let notes = `\n${chalk.cyan.bold("Notes:")}\n`;
+                    let notes = `${chalk.cyan.bold("Notes:")}\n`;
+                    const t = new easyTable;
                 
-                    console.log(`${chalk.cyan.bold("\nGoogle Lighthouse Report")}: ${parsedJSON.url}\nAll scores are out of 100.\n`);
-                    console.log(`${chalk.cyan.bold("Score\tMetric")}`);
+                    console.log(`${chalk.cyan.bold("\nGoogle Lighthouse Report")}: ${parsedJSON.url}\nAll scores are out of 100. For more details on the contents of each section of this report please check out the full report at ${chalk.cyan.bold.underline(path.resolve(`./report-${unixTimeStamp}.html`))}.\n`);
                 
                     parsedJSON.reportCategories.forEach(el => {
                 
@@ -147,20 +153,23 @@ module.exports = {
                 
                             /** Highlight average scores yellow and bold */
                             score = chalk.yellow.bold(score);
-                            notes = `${notes}* Your score for the "${el.name}" metric needs improvment, please consult the report.html file generated for a detailed breakdown on what to improve.\n`;
+                            notes = `${notes}* Your score for the ${chalk.bgYellow.black.bold(`"${el.name}" metric needs improvement`)}. Please consult the ${chalk.cyan.bold.underline(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on what to improve.\n`;
                 
                         } else if(el.score <= ratings.fail) {
                             
                             /** Highlight failing scores red and bold */
                             score = chalk.red.bold(score);
-                            notes = `${notes}* Your score for the "${el.name}" metric is poor, please consult the report.html file generated for a detailed breakdown on how to improve it.\n`;
+                            notes = `${notes}* Your score for the ${chalk.bgRed.white.bold(`"${el.name}" metric is poor`)}. Please consult the ${chalk.cyan.bold.underline(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on how to improve it.\n`;
                         }
                 
-                        console.log(`${score}\t${el.name}`);
+                        //console.log(`${score}\t${el.name}`);
+                        t.cell("Score", score);
+                        t.cell("Metric", el.name);
+                        t.newRow();
                     });
-                
-                    /** Output the notes to the console now that we've gathered all of them into one string */
-                    console.log(`${notes}\n`);
+
+                    console.log(t.toString());
+                    console.log(notes);
                 
                     /**
                      * Get the result of the "no-vulnerable-libraries" audit under the "Best Practices" section
@@ -169,22 +178,38 @@ module.exports = {
                 
                     /** If there are in fact vulnerable JS libraries in the passed in site let the user now */
                     if(!vulnerabilities.score) {
-                        console.log(`${chalk.cyan.bold("Included front-end JavaScript libraries with known security vulnerabilities:")}\n`);
-                        console.log(vulnerabilities.displayValue + "\n");
-                        console.log(`${chalk.cyan.bold("Library Version")}\t${chalk.cyan.bold("Vulnerability Count")}\t${chalk.cyan.bold("Highest Severity")}\t${chalk.cyan.bold("Url")}`);
+                        console.log(`${chalk.cyan.bold("Included front-end JavaScript libraries with known security vulnerabilities:")}`);
+                        console.log(chalk.bgRed.bold.white(vulnerabilities.displayValue) + "\n");
                         
-                        vulnerabilities.extendedInfo.jsLibs.forEach(el => {
-                            console.log(`${el.name}@${el.version}\t${el.vulnCount}\t\t\t${el.highestSeverity}\t\t\t${el.pkgLink}`);
+                        const vulnTable = new easyTable;
+                        
+                        vulnerabilities.extendedInfo.vulnerabilities.forEach(el => {
+                            let lib = `${el.name}@${el.version}`;
+                            let vulnCount = el.vulnCount;
+                            let url = el.pkgLink;
+                            let sev = el.highestSeverity;
+
+                            if(el.highestSeverity === "Medium") {
+                                lib = chalk.yellow.bold(lib);
+                                vulnCount = chalk.yellow.bold(vulnCount);
+                                url = chalk.yellow.bold.underline(el.pkgLink);
+                                sev = chalk.yellow.bold(sev);
+                            } else if(el.highestSeverity === "High") {
+                                lib = chalk.red.bold(lib);
+                                vulnCount = chalk.red.bold(vulnCount);
+                                url = chalk.red.bold.underline(url);
+                                sev = chalk.red.bold(sev);
+                            }
+
+                            vulnTable.cell("Library Version", lib);
+                            vulnTable.cell("Vulnerability Count", vulnCount);
+                            vulnTable.cell("Highest Severity", sev);
+                            vulnTable.cell("URL", url);
+                            vulnTable.newRow();
                         });
-                
-                        /**
-                         * Add an extra line between the end our vulnerabilities table and the beginning of the observatory results
-                         */
-                        console.log("\n");
+                        
+                        console.log(vulnTable.toString());
                     }
-
-                    console.log(`For more details on the contents of each section of this report please check out the full report at ${chalk.cyan.bold.underline(path.resolve("./report.html"))}.\n`);
-
                 });
             });
 
@@ -226,19 +251,33 @@ module.exports = {
                                     console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
                                 }
 
-                               var lines = data.split("\n"),
-                                   filteredLines = lines.filter(line => !line.includes("observatory [WARN]")),
-                                   cleanData = filteredLines.join("\n"),
-                                   parsedData = JSON.parse(cleanData);
+                               const lines = data.split("\n"),
+                                     filteredLines = lines.filter(line => !line.includes("observatory [WARN]")),
+                                     cleanData = filteredLines.join("\n"),
+                                     parsedData = JSON.parse(cleanData),
+                                     obsTable = new easyTable,
+                                     detailTable = new easyTable;
 
                                 console.log(`${chalk.cyan.bold("\nMozilla Observatory Security Report: ")} ${url}\n`);
-                                console.log(`${chalk.cyan.bold("Score")}\t${chalk.cyan.bold("Rule")}\t\t\t${chalk.cyan.bold("Description")}\t${chalk.cyan.bold("Result")}\t${chalk.cyan.bold("Pass or Fail")}\n`); 
-                               
+
                                 for(let prop in parsedData) {
                                     const test = parsedData[prop];
 
-                                    console.log(`${test.score_modifier}\t${chalk.red.bold(test.name)}\t\t\t${test.score_description}\t${test.result}\t${test.pass}\n`);
+                                    obsTable.cell("Score", test.score_modifier);
+                                    obsTable.cell("Rule", chalk.red.bold(test.name))
+                                    obsTable.cell("Description", test.score_description);
+                                    obsTable.cell("Pass?", (test.pass ? chalk.green.bold("\u2714") : chalk.red.bold("\u2718")));
+                                    obsTable.newRow();
+
+                                    detailTable.cell("Rule", chalk.red.bold(test.name));
+                                    detailTable.cell("Result", test.result);
+                                    detailTable.newRow();
                                 }
+                                
+                                console.log(chalk.cyan.bold("Overview"));
+                                console.log(obsTable.toString());
+                                console.log(chalk.cyan.bold("More Details"));
+                                console.log(detailTable.toString());
 
                                 fs.readFile("report.txt", "utf8", (err, data) => {
                                     if(err) {
