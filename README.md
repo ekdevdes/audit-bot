@@ -45,10 +45,10 @@ Output detailed logs of the current stage of the lighthouse test
 #### --only=[lighthouse|observatory]
 `--only=lighthouse` will only run the lighthouse test and not the mozilla observatory security test and `--only=observatory` will only run the mozilla observatory security test
 
-### --help
+#### --help
 Shows the help documentation for this command
 
-### --version
+#### --version
 Outputs the version number of currently installed version of the command (latest is 1.0.0)
 
 ## The License
