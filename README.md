@@ -6,36 +6,37 @@ A command line tool that allows to run Google Lighthouse and Mozilla Observatory
 `npm i -g audit-cli`
 
 ## Usage
-*&lt;url&gt;* is required, options are....well, optional.
+*&lt;url&gt;* is required, options are....well, optional.<br><br>
 
 <pre>
 report &lt;url&gt; [options]
 </pre>
-Runs both a Google Lighthouse and Mozilla Observatory Security report
+Runs both a Google Lighthouse and Mozilla Observatory Security report<br><br>
 
 <pre>
 report http://localhost:3030 --verbose
 </pre>
-Runs both a Google Lighthouse and Mozilla Observatory Security report using verbose output for lighthouse
+Runs both a Google Lighthouse and Mozilla Observatory Security report using verbose output for lighthouse<br><br>
 
 <pre>
 report http://google.com
 </pre>
+Runs only a Google Lighthouse report using verbose output for lighthouse<br><br>
 
 <pre>
 report http://localhost:8888 --verbose --only=lighthouse
 </pre>
-Runs only a Google Lighthouse report using verbose output for lighthouse
+Runs only a Google Lighthouse report using verbose output for lighthouse<br><br>
 
 <pre>
 report http://instagram.com --only=observatory
 </pre>
-Runs only a Mozilla Observatory Security report
+Runs only a Mozilla Observatory Security report<br><br>
 
 <pre>
 report http://example.localhost.com:3000 --only=lighthouse
 </pre>
-Runs only a Google Lighthouse report
+Runs only a Google Lighthouse report<br><br>
 
 ### Options
 
