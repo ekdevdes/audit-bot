@@ -1,13 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * Notes:
- * 
- * Local urls don't work for observatory. 
- * As its working currently the report.html file is going into the directory they run the command from
- * Observatory cli command does like www and subdomains actually I just tried it (12/22)
- */
-
  /**
   * TODOS
   *
@@ -21,7 +13,8 @@
   * and delete the original folder so you only have the zip file. That would be great for when this commmand is run as a cron job
   * on a server. Make the filename of the pdf report-{unix-time-stamp-of-time-of-request}.pdf, this will solve the problem
   * that could occur by calling "report <url> -f" without passing in a file path to save the pdf to multiple times and the the previous
-  * pdf getting overwritten by the new pdf. E.g. report-18383039.pdf.
+  * pdf getting overwritten by the new pdf. E.g. report-18383039.pdf. And a "--open" and "-o" options can open the resulting PDF in the 
+  * browser/pdf viewer of choice.
   *
   * TODO: Make observatory tests run on localhost urls (urls containing "localhost") output an error saying that
   * observatory does not support localhost urls. When running both lighthouse and observatory with a localhost url 
