@@ -48,15 +48,15 @@ const argv = require('yargs')
   .usage("$0 url [options]")
   .option("verbose", {
     alias: "v",
-    type: 'boolean',
+    type: "boolean",
     describe: "Logs all the metrics currently being tested",
     default: false
   })
   .option("only", {
     alias: "o",
     describe: "Run only lighthouse or only observatory tests",
-    type: 'string',
-    choices: ['lighthouse', 'observatory']
+    type: "string",
+    choices: ["lighthouse", "observatory"]
   })
   .example("$0 http://localhost:3030 --verbose", "Runs a lighthouse test on localhost. Localhost urls don't work with observatory. Using the verbose output option described above.")
   .example("$0 https://example.com -v", "Runs a lighthouse and observatory security test on example.com. Localhost urls don't work with observatory. Using the verbose output option described above.")

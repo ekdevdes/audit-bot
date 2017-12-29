@@ -214,6 +214,7 @@ module.exports = {
             });
 
         },
+        
         /**
          * Runs a observatory security test on a given url
          * 
@@ -311,6 +312,7 @@ module.exports = {
                 });
             });
         },
+       
         /**
          * Runs both an observatory lighthouse test and an observatory security test on a given url
          * 
@@ -318,7 +320,12 @@ module.exports = {
          * @param {string} url url to test
          */
         all: function(args, url){
-          
+            const spinner = ora({
+                text: "Running lighthouse tests...",
+                spinner: "weather",
+                color: "green"
+            }); 
+            spinner.start(); 
 
         }
     }
