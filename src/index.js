@@ -10,8 +10,9 @@
 
  /**
   * TODOS
-  * 
-  * TODO: write the tests.run.all function that just does a lighthouse test, then observatory test
+  *
+  * TODO: URLs like http://localhost:8888/vuejs-tuts/coligo/dynamic-components/ throw an "Improper URL format" error,
+  * also http://localhost:8888/MAMP/?language=English is an improper url and so is http://localhost/
   *
   * TODO: Add the ability to save the terminal output to a pdf file with a "--file" or "-f" option which by default will save 
   * the PDF to the directory the command is being run from but you can pass in an argument of where you want the pdf file to
@@ -52,17 +53,17 @@ const argv = require('yargs')
     describe: "Logs all the metrics currently being tested",
     default: false
   })
-  .option("only", {
-    alias: "o",
+  .option("test", {
+    alias: "t",
     describe: "Run only lighthouse or only observatory tests",
     type: "string",
     choices: ["lighthouse", "observatory"]
   })
   .example("$0 http://localhost:3030 --verbose", "Runs a lighthouse test on localhost. Localhost urls don't work with observatory. Using the verbose output option described above.")
   .example("$0 https://example.com -v", "Runs a lighthouse and observatory security test on example.com. Localhost urls don't work with observatory. Using the verbose output option described above.")
-  .example("$0 https://internet.example.com --only=observatory", "Runs only a observatory security test on internet.example.com. Without using verbose output.")
-  .example("$0 http://example.localhost.com -o lighthouse", "Runs only a lighthouse test on exaple.localhost.com. Without using verbose output.")
-  .example("$0 https://amazing.io -vo lighthouse", "Runs only a lighthouse test on amazing.io, using verbose output.")
+  .example("$0 https://internet.example.com --test=observatory", "Runs only a observatory security test on internet.example.com. Without using verbose output.")
+  .example("$0 http://example.localhost.com -t lighthouse", "Runs only a lighthouse test on exaple.localhost.com. Without using verbose output.")
+  .example("$0 https://amazing.io -vt lighthouse", "Runs only a lighthouse test on amazing.io, using verbose output.")
   .argv;
 
 /**
@@ -93,7 +94,7 @@ let nonValidOptions = [];
  */
 Object.keys(argv).map(key => {
     const standardKeys = ["_", "$0", "version", "help"];
-    const customOptions = ["v", "o", "verbose", "only"];
+    const customOptions = ["v", "t", "verbose", "test"];
 
     if(!standardKeys.includes(key) && !customOptions.includes(key)) {
         nonValidOptions.push(key);
@@ -115,9 +116,9 @@ if(url && isURLValid) {
     const urlMatches = urlRegex.exec(url);
     const domainOnlyURL = urlMatches[0].split("//")[1].split("/")[0];
 
-    if(argv.only && argv.only === "lighthouse") {
+    if(argv.test && argv.test === "lighthouse") {
         tests.run.lighthouse(argv, url);
-    } else if(argv.only && argv.only === "observatory") {
+    } else if(argv.test && argv.test === "observatory") {
         tests.run.observatory(argv, domainOnlyURL);
     } else {
 

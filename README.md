@@ -15,6 +15,7 @@ Runs both a Google Lighthouse and Mozilla Observatory Security report<br><br>
 
 <pre>
 report http://localhost:3030 --verbose
+report http://localhost:3030 -v
 </pre>
 Runs both a Google Lighthouse and Mozilla Observatory Security report using verbose output for lighthouse<br><br>
 
@@ -24,27 +25,29 @@ report http://google.com
 Runs only a Google Lighthouse report using verbose output for lighthouse<br><br>
 
 <pre>
-report http://localhost:8888 --verbose --only=lighthouse
+report http://localhost:8888 --verbose --test=lighthouse
+report http://localhost:8888 -vt lighthouse
 </pre>
 Runs only a Google Lighthouse report using verbose output for lighthouse<br><br>
 
 <pre>
-report http://instagram.com --only=observatory
+report http://instagram.com --test=observatory
+report http://instagram.com -t observatory
 </pre>
 Runs only a Mozilla Observatory Security report<br><br>
 
 <pre>
-report http://example.localhost.com:3000 --only=lighthouse
+report http://example.localhost.com:3000 -t lighthouse
 </pre>
 Runs only a Google Lighthouse report<br><br>
 
 ### Options
 
-#### --verbose
+#### --verbose, -v
 Output detailed logs of the current stage of the lighthouse test
 
-#### --only=[lighthouse|observatory]
-`--only=lighthouse` will only run the lighthouse test and not the mozilla observatory security test and `--only=observatory` will only run the mozilla observatory security test
+#### --test=[lighthouse|observatory], -t [lighthouse|observatory]
+`--test=lighthouse` will only run the lighthouse test and not the mozilla observatory security test and `--test=observatory` will only run the mozilla observatory security test
 
 #### --help
 Shows the help documentation for this command
