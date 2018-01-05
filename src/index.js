@@ -15,11 +15,6 @@
   * that could occur by calling "report <url> -f" without passing in a file path to save the pdf to multiple times and the the previous
   * pdf getting overwritten by the new pdf. E.g. report-18383039.pdf. And a "--open" and "-o" options can open the resulting PDF in the 
   * browser/pdf viewer of choice.
-  *
-  * TODO: Make observatory tests run on localhost urls (urls containing "localhost") output an error saying that
-  * observatory does not support localhost urls. When running both lighthouse and observatory with a localhost url 
-  * tests at the same time output a yellow warning saying that observatory tests will not be ran because observatory
-  * does not support localhost urls
   */
 
 /**
