@@ -3,8 +3,7 @@
  /**
   * TODOS
   *
-  * TODO: URLs like http://localhost:8888/vuejs-tuts/coligo/dynamic-components/ throw an "Improper URL format" error,
-  * also http://localhost:8888/MAMP/?language=English is an improper url and so is http://localhost/
+  * TODO: In fixing the issue with the url regexp that existed previously, I broke the test.run.all method
   *
   * TODO: Add the ability to save the terminal output to a pdf file with a "--file" or "-f" option which by default will save 
   * the PDF to the directory the command is being run from but you can pass in an argument of where you want the pdf file to
