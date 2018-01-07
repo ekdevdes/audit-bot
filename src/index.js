@@ -62,11 +62,11 @@ const argv = require('yargs')
  */
 const shellExec = require("shell-exec");
 
+/** Contains the url regex, matcher and domain extraction */
+const urlLib = require("./url");
 const tests = require("./tests");
 
 const url = argv._[0] || "";
-const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/g;
-const isURLValid = url.match(urlRegex);
 
 /**
  * An array of non valid options passed into the command 
@@ -99,25 +99,21 @@ if(nonValidOptions.length > 0) {
     return;
 }
 
-/** A url was passed in to the command is a valid url */
-if(url && isURLValid) {
-    const urlMatches = urlRegex.exec(url);
-    const domainOnlyURL = urlMatches[0].split("//")[1].split("/")[0];
+if(url && urlLib.isURLValid(url)) {
+    const domainOnlyURL = urlLib.domainOnlyURL(url);
 
     if(argv.test && argv.test === "lighthouse") {
         tests.run.lighthouse(argv, url);
     } else if(argv.test && argv.test === "observatory") {
         tests.run.observatory(argv, domainOnlyURL);
     } else {
-
         // tests.run.all will have to split the url itself
        tests.run.all(argv, url);
     }
-
-
+    
 /** A url was passed in to the command, but was invalid */
-} else if(url && !isURLValid) {
-    console.log(chalk.bgRed.white.bold("[ERROR] Invalid url format\nValid Formats: https://example.com, http://example.com, http://subdomain.example.com, http://subdomain.example.com?a=b&c=d"));
+} else if(url && !urlLib.isURLValid(url)) {
+    console.log(chalk.bgRed.white.bold("[ERROR] Invalid URL format"));
 
 /** A url was not passed into the command */
 } else {

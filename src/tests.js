@@ -34,9 +34,24 @@ const chalk = require("chalk");
  */
 const ora = require("ora");
 
+/**
+ * Colorful CLI Spinners 
+ * 
+ * @var {object} easyTable
+ * @see https://www.npmjs.com/package/easy-table
+ */
 const easyTable = require("easy-table");
 
+/**
+ * Used to easily get the current unix timestamp 
+ * 
+ * @var {function} unix
+ * @see https://www.npmjs.com/package/to-unix-timestamp
+ */
 const unix = require("to-unix-timestamp");
+
+/** Contains the url regex, matcher and domain extraction */
+const urlLib = require("./url");
 
 module.exports = {
     run: {
@@ -59,7 +74,6 @@ module.exports = {
             }
 
             const unixTimeStamp = unix(new Date());
-
             let lighthouseCommand = `lighthouse ${url} --chrome-flags="--headless" --quiet --output=html --output-path=./report-${unixTimeStamp}.html`;
 
             /** Show the log from the lighthouse command if --verbose is passed in */
@@ -238,7 +252,7 @@ module.exports = {
             }); 
             const unixTimeStamp = unix(new Date());
 
-            if(url.includes("localhost")){
+            if(urlLib.isLocal(url)){
                 console.log(chalk.bgRed.white.bold("[ERROR] Mozilla Observatory does not support testing on localhost URLs"));
                 return;
             }
@@ -347,7 +361,7 @@ module.exports = {
                 spinner: "weather",
                 color: "green"
             }); 
-            let isLocalURL = (url.includes("localhost"));
+            let isLocalURL = (urlLib.isLocal(url));
 
             /**
              * What scores for each metric of each test will result in a pass, fail or average result
@@ -537,9 +551,7 @@ module.exports = {
                     }
 
                     /** Format URL to pass to observatory */
-                    const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/g;
-                    const urlMatches = urlRegex.exec(url);
-                    const domainOnlyURL = urlMatches[0].split("//")[1].split("/")[0];
+                    const domainOnlyURL = urlLib.domainOnlyURL(url);
 
                     /** Run the the observatory tests */
                     shellExec(`observatory ${domainOnlyURL} --format=json &>report-${unixTimeStamp}-observatory.json`).then(() => {
