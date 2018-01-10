@@ -110,7 +110,7 @@ if(url && urlLib.isURLValid(url)) {
             accessibilityScore: 78,
             bestPracticesScore: 68,
             seoScore: 68
-        });
+        }, 'lighthouse');
         // tests.run.lighthouse(argv, url);
     } else if(argv.test && argv.test === "observatory") {
         tests.run.observatory(argv, domainOnlyURL);
