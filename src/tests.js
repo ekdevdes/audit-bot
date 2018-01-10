@@ -262,7 +262,7 @@ module.exports = {
             shellExec(`observatory ${url} --format=json &>report-${unixTimeStamp}-observatory.json`).then(() => {
                 fs.readFile(`report-${unixTimeStamp}-observatory.json`, "utf8", (err, data) => {
                     if(err) {
-                        console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
+                        console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")));
                     }
 
                     if(data.includes("observatory [ERROR]")){

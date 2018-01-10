@@ -103,8 +103,15 @@ if(url && urlLib.isURLValid(url)) {
     const domainOnlyURL = urlLib.domainOnlyURL(url);
 
     if(argv.test && argv.test === "lighthouse") {
-        htmltopdf.generate();
-        //tests.run.lighthouse(argv, url);
+        htmltopdf.generate({
+            url,
+            pwaScore: 89,
+            performanceScore: 69,
+            accessibilityScore: 78,
+            bestPracticesScore: 68,
+            seoScore: 68
+        });
+        // tests.run.lighthouse(argv, url);
     } else if(argv.test && argv.test === "observatory") {
         tests.run.observatory(argv, domainOnlyURL);
     } else {
