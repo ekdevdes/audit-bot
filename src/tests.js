@@ -61,7 +61,7 @@ module.exports = {
          * @param {object} argv Arguments from yargs
          * @param {string} url url to test
          */
-        lighthouse: function(args, url) {
+        lighthouse(args, url) {
             /**
              * What scores for each metric of each test will result in a pass, fail or average result
              * 
@@ -243,7 +243,7 @@ module.exports = {
          * @param {object} argv Arguments from yargs
          * @param {string} url url to test
          */
-        observatory: function(args, url) {
+        observatory(args, url) {
 
             const spinner = ora({
                 text: "Running through tests...",
@@ -355,7 +355,7 @@ module.exports = {
          * @param {object} argv Arguments from yargs
          * @param {string} url url to test
          */
-        all: function(args, url){
+        all(args, url){
             const spinner = ora({
                 text: "Running lighthouse tests...",
                 spinner: "weather",

@@ -64,6 +64,7 @@ const shellExec = require("shell-exec");
 /** Contains the url regex, matcher and domain extraction */
 const urlLib = require("./url");
 const tests = require("./tests");
+const htmltopdf = require("./htmltopdf");
 
 const url = argv._[0] || "";
 
@@ -102,7 +103,8 @@ if(url && urlLib.isURLValid(url)) {
     const domainOnlyURL = urlLib.domainOnlyURL(url);
 
     if(argv.test && argv.test === "lighthouse") {
-        tests.run.lighthouse(argv, url);
+        htmltopdf.generate();
+        //tests.run.lighthouse(argv, url);
     } else if(argv.test && argv.test === "observatory") {
         tests.run.observatory(argv, domainOnlyURL);
     } else {

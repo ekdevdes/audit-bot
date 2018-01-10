@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Google Lighthouse Test Results</title>
+    <style>
+        html, body {
+            font-family: sans-serif;
+        }
+
+        table {
+            text-align: left;
+        }
+
+        table th {
+            padding: 10px;
+        }
+
+        table th,
+        table td {
+            padding-right: 20px;
+        }
+
+        table tr td:first-child{
+            padding-left: 10px;
+        }
+
+        .poor{
+            color: red;
+        }
+
+        .ok{
+            color: orange;
+        }
+
+        .good{
+            color: green;
+        }
+
+        .good, .ok, .poor{
+            font-weight: bold;
+        }
+
+        h1 {
+            font-size: 25px;
+            padding-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google Lighthouse Report: <a href="{{url}}">{{url}}</a></h1>
+    <table>
+        <thead>
+          <tr>
+            <th>Score</th>
+            <th>Metric</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="poor">{{pwaScore}}</td>
+            <td>Progressive Web App</td>
+          </tr>
+          <tr>
+            <td class="ok">{{performanceScore}}</td>
+            <td>Performance</td>
+          </tr>
+          <tr>
+            <td class="good">{{accessibilityScore}}</td>
+            <td>Accessibility</td>
+          </tr>
+          <tr>
+            <td class="poor">{{bestPracticesScore}}</td>
+            <td>Best Practices</td>
+          </tr>
+          <tr>
+            <td class="good">{{seoScore}}</td>
+            <td>SEO</td>
+          </tr>
+        </tbody>
+      </table>
+</body>
+</html>
