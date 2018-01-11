@@ -18,12 +18,12 @@ const unix = require("to-unix-timestamp");
 const chalk = require("chalk");
 
 /**
- * Used to turn our HTML report templates to pdfs 
+ * The library we're using to execute the "lighthouse" and "observatory" cli commands from node
  * 
- * @var {function} htmltopdf
- * @see https://www.npmjs.com/package/html5-to-pdf
+ * @var {function} shellExec
+ * @see https://www.npmjs.com/package/shell-exec
  */
-const htmltopdf = require("html5-to-pdf");
+const shellExec = require("shell-exec");
 
 const unixTimeStamp = unix(new Date());
 
@@ -119,26 +119,21 @@ module.exports = {
 
             // in the second part of the ternary operator we need to check to see if the path doesn't end in a "/" and if it does we need add it to the end before appending our file name
             const generatedPDFPath = (pdfFilePath == "") ? `report-${unixTimeStamp}.pdf` : `${pdfFilePath}/report-${unixTimeStamp}.pdf`;
-            
-            const pdfgen = new htmltopdf({
-                inputPath: path.resolve(__dirname, generatedFilePath),
-                outputPath: generatedPDFPath
-            });
+            const pathToReport = path.resolve(__dirname, generatedFilePath);
 
-            // also the pdf that this generates is blank now.....
-            pdfgen.build(err => {
-                if(err) {
-                    console.log(chalk.bgRed.white.bold(`[ERROR] ${err.replace('Error: ')}`));
-                }
-            });
+            shellExec(`html-pdf ${pathToReport} ${generatedPDFPath}`).then(() => {
+                console.log(`PDF Saved to: "${generatedPDFPath}"`);
 
-            /**
-             * Remove the generated html file since we don't need it anymore now that the PDF is generated
-             */
-            fs.unlink(path.resolve(__dirname, generatedFilePath), (err) => {
-                if(err) {
-                    console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
-                }
+                /**
+                 * Remove the generated html file since we don't need it anymore now that the PDF is generated
+                 */
+                fs.unlink(path.resolve(__dirname, generatedFilePath), (err) => {
+                    if(err) {
+                        console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
+                    }
+                });
+            }).catch(err => {
+                console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")));
             });
         });
         

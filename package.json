@@ -20,7 +20,7 @@
     "yargs": "^10.0.3"
   },
   "scripts": {
-    "preinstall": "npm i -g observatory-cli lighthouse"
+    "preinstall": "npm i -g observatory-cli lighthouse html-pdf"
   },
   "bin": {
     "report": "./src/index.js"
