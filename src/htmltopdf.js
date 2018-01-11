@@ -34,7 +34,7 @@ module.exports = {
      * 
      * @param {object} replacements an object containing keys and values to replace the placeholder strings in the template files with
      * @param {string} test only possible values are "lighthouse", "observatory" or "all" 
-     * @param {*} pdfFilePath where the generated PDF should be saved to. Optional, defaults to the directory the "report" command is beign run from. Note: this is a directory. Not to end with .pdf
+     * @param {string} pdfFilePath where the generated PDF should be saved to. Optional, defaults to the directory the "report" command is beign run from. Note: this is a directory. Not to end with .pdf
      */
     generate(replacements, test, pdfFilePath = ""){
         fs.readFile(path.resolve(__dirname, `templates/${test}.html`), "utf8", (err, data) => {
