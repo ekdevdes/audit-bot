@@ -41,6 +41,11 @@ report http://example.localhost.com:3000 -t lighthouse
 </pre>
 Runs only a Google Lighthouse report<br><br>
 
+<pre>
+report http://example.localhost.com:3000 -ft lighthouse
+</pre>
+Runs only a Google Lighthouse report and saves a PDF of the terminal output to the directory the command is run from<br><br>
+
 ### Options
 
 #### --verbose, -v
