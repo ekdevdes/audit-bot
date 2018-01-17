@@ -1,8 +1,19 @@
+# Editor files
 .editorconfig
-.jshintrc
-.travis.yml
-.babelrc
 .idea/
 .vscode/
-test/
+
+# CI/CD, Babel and JShint files
+.babelrc
+.travis.yml
+.jshintrc
+
+# Github
 .github/
+
+# Project-specific files
+#
+# package-lock.json cannot be published (https://stackoverflow.com/questions/44546718/should-package-lock-json-also-be-published)
+test/
+notes.txt
+package-lock.json

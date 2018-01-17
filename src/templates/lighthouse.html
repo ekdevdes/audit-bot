@@ -21,6 +21,10 @@
             padding-right: 20px;
         }
 
+        table td {
+            padding-left: 10px;
+        }
+
         table tr td:first-child{
             padding-left: 10px;
         }
@@ -43,12 +47,38 @@
 
         h1 {
             font-size: 25px;
+        }
+
+        header, .notes, .vulns h3 {
             padding-left: 10px;
+        }
+
+        .notes {
+            margin-top: 20px;
+        }
+
+        .bgRed {
+            background: red;
+            color: white;
+            padding: 5px;
+            position: relative;
+            top: 5px;
+        }
+
+        .bgYellow {
+            background: yellow;
+            color: black;
+            padding: 5px;
+            position: relative;
+            top: 5px;
         }
     </style>
 </head>
 <body>
-    <h1>Google Lighthouse Report: <a href="{{url}}">{{url}}</a></h1>
+    <header>
+        <h1>Google Lighthouse Report: <a href="{{url}}">{{url}}</a></h1>
+        <p>All scores are out of 100. For more details on the contents of each section of this report please check out the full report at <a href="file://{{pathToLighthouseReport}}"><strong>{{pathToLighthouseReport}}</strong></a>.</p>
+    </header>
     <table>
         <thead>
           <tr>
@@ -58,26 +88,28 @@
         </thead>
         <tbody>
           <tr>
-            <td class="{{scoreClass:pwaScore}}">{{pwaScore}}</td>
+            <td class="{{scores.pwa.class}}">{{scores.pwa}}</td>
             <td>Progressive Web App</td>
           </tr>
           <tr>
-            <td class="{{scoreClass:performanceScore}}">{{performanceScore}}</td>
+            <td class="{{scores.performance.class}}">{{scores.performance}}</td>
             <td>Performance</td>
           </tr>
           <tr>
-            <td class="{{scoreClass:accessibilityScore}}">{{accessibilityScore}}</td>
+            <td class="{{scores.accessibility.class}}">{{scores.accessibility}}</td>
             <td>Accessibility</td>
           </tr>
           <tr>
-            <td class="{{scoreClass:bestPracticesScore}}">{{bestPracticesScore}}</td>
+            <td class="{{scores.bestPractices.class}}">{{scores.bestPractices}}</td>
             <td>Best Practices</td>
           </tr>
           <tr>
-            <td class="{{scoreClass:seoScore}}">{{seoScore}}</td>
+            <td class="{{scores.seo.class}}">{{scores.seo}}</td>
             <td>SEO</td>
           </tr>
         </tbody>
       </table>
+      {{section.notes}}
+      {{section.vulns}}
 </body>
 </html>

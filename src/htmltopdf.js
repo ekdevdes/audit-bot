@@ -36,7 +36,7 @@ module.exports = {
      * @param {string} test only possible values are "lighthouse", "observatory" or "all" 
      * @param {string} pdfFilePath where the generated PDF should be saved to. Optional, defaults to the directory the "report" command is beign run from. Note: this is a directory. Not to end with .pdf
      */
-    generate(replacements, test, pdfFilePath = ""){
+    generate(test, replacements, pdfFilePath = ""){
         fs.readFile(path.resolve(__dirname, `templates/${test}.html`), "utf8", (err, data) => {
             if(err) {
                 console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")));

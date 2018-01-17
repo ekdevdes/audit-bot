@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Mozilla Observatory Test Results</title>
+    <style>
+        html, body {
+            font-family: sans-serif;
+        }
+
+        table {
+            text-align: left;
+        }
+
+        table th {
+            padding: 10px;
+        }
+
+        table th,
+        table td {
+            padding-right: 20px;
+        }
+
+        table td {
+            padding-left: 10px;
+        }
+
+        table tr td:first-child{
+            padding-left: 10px;
+        }
+
+        h1 {
+            font-size: 25px;
+            padding-left: 10px;
+        }
+
+        .green {
+            color: green;
+            font-weight: bold;
+        }
+    
+        .red {
+            color: red;
+            font-weight: bold;
+        }
+
+        .results {
+            padding-left: 10px;
+            margin-top: 20px;
+        }
+
+        .results p{
+            margin-bottom: 0;
+            margin-top: 0;
+        }
+
+        .results p:first-child {
+            margin-bottom: 5px;
+        }
+
+        .info {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mozilla Observatory Report: <a href="{{url}}">{{url}}</a></h1>
+    <table>
+        <thead>
+          <tr>
+            <th>Score</th>
+            <th>Rule</th>
+            <th>Description</th>
+            <th>Result</th>
+            <th>Pass?</th>
+          </tr>
+        </thead>
+        <tbody>
+            {{obsRule}}
+        </tbody>
+      </table>
+      <section class="results">
+        <div class="grades">
+            <p><strong>Score: </strong> {{score}}</p>
+            <p><strong>Grade: </strong> {{grade}}</p>
+        </div>
+        <div class="info">
+            <p>For more details on the contents of each section of this report please check out the full report at <a href="https://observatory.mozilla.org/analyze.html?host={{url}}">https://observatory.mozilla.org/analyze.html?host={{url}}</a>.</p>
+            <p>Additionally please consult this page for answered to commonly asked questions about Mozilla's Observatory Security Report <a href="https://observatory.mozilla.org/faq.html">https://observatory.mozilla.org/faq.html</a>.</p>
+        </div>
+      </section>
+</body>
+</html>

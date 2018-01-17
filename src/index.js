@@ -25,6 +25,14 @@
 const chalk = require("chalk");
 
 /**
+ * The library we're using for colorful console.logs (e.g. changing text color, text bg color)
+ * 
+ * @var {object} deepKeys
+ * @see https://www.npmjs.com/package/deep-keys
+ */
+const deepKeys = require("deep-keys");
+
+/**
  * The library we're using to pull out and parse the passed in args to the command. Additionally,
  * we're documenting the available options, their aliases, their default values and their purpose
  * for the help screen
@@ -103,15 +111,15 @@ if(url && urlLib.isURLValid(url)) {
     const domainOnlyURL = urlLib.domainOnlyURL(url);
 
     if(argv.test && argv.test === "lighthouse") {
-        htmltopdf.generate({
+        htmltopdf.generate("lighthouse", {
             url,
             pwaScore: 89,
             performanceScore: 69,
             accessibilityScore: 78,
             bestPracticesScore: 68,
             seoScore: 68
-        }, 'lighthouse');
-        // tests.run.lighthouse(argv, url);
+        }, );
+        tests.run.lighthouse(argv, url);
     } else if(argv.test && argv.test === "observatory") {
         tests.run.observatory(argv, domainOnlyURL);
     } else {
