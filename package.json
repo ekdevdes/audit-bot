@@ -11,9 +11,7 @@
   },
   "dependencies": {
     "chalk": "^2.3.0",
-    "deep-keys": "^0.5.0",
     "easy-table": "^1.1.0",
-    "html5-to-pdf": "^2.2.9",
     "jsdom": "^11.5.1",
     "ora": "^1.3.0",
     "shell-exec": "^1.0.0",
@@ -21,7 +19,7 @@
     "yargs": "^10.0.3"
   },
   "scripts": {
-    "preinstall": "npm i -g observatory-cli lighthouse html-pdf"
+    "preinstall": "npm i -g observatory-cli lighthouse@2.8.0 html-pdf"
   },
   "bin": {
     "report": "./src/index.js"

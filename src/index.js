@@ -5,15 +5,8 @@
   *
   * TODO: In fixing the issue with the url regexp that existed previously, I broke the test.run.all method
   *
-  * TODO: Add the ability to save the terminal output to a pdf file with a "--file" or "-f" option which by default will save 
-  * the PDF to the directory the command is being run from but you can pass in an argument of where you want the pdf file to
-  * be outputted to instead. When the -f option is passed in a folder will be created (will have to have a unique name) with the
-  * lighthouse report html and the holisitic report pdf. Maybe if a -z or "--zip" option is passed in then it will zip the folder
-  * and delete the original folder so you only have the zip file. That would be great for when this commmand is run as a cron job
-  * on a server. Make the filename of the pdf report-{unix-time-stamp-of-time-of-request}.pdf, this will solve the problem
-  * that could occur by calling "report <url> -f" without passing in a file path to save the pdf to multiple times and the the previous
-  * pdf getting overwritten by the new pdf. E.g. report-18383039.pdf. And a "--open" and "-o" options can open the resulting PDF in the 
-  * browser/pdf viewer of choice.
+  * TODO: Finish pdf.js to generate a pdf for observatory test results and "all" test results and move the 
+  * call to pdf.generate(...) to tests.js until after we've gathered all the test data
   */
 
 /**
@@ -23,14 +16,6 @@
  * @see https://www.npmjs.com/package/chalk
  */
 const chalk = require("chalk");
-
-/**
- * The library we're using for colorful console.logs (e.g. changing text color, text bg color)
- * 
- * @var {object} deepKeys
- * @see https://www.npmjs.com/package/deep-keys
- */
-const deepKeys = require("deep-keys");
 
 /**
  * The library we're using to pull out and parse the passed in args to the command. Additionally,
@@ -54,11 +39,17 @@ const argv = require('yargs')
     type: "string",
     choices: ["lighthouse", "observatory"]
   })
+  .option("file", {
+    alias: "f",
+    describe: "Generate a pdf of the terminal output and specify a path to save it to",
+    type: "string"
+  })
   .example("$0 http://localhost:3030 --verbose", "Runs a lighthouse test on localhost. Localhost urls don't work with observatory. Using the verbose output option described above.")
   .example("$0 https://example.com -v", "Runs a lighthouse and observatory security test on example.com. Localhost urls don't work with observatory. Using the verbose output option described above.")
   .example("$0 https://internet.example.com --test=observatory", "Runs only a observatory security test on internet.example.com. Without using verbose output.")
   .example("$0 http://example.localhost.com -t lighthouse", "Runs only a lighthouse test on exaple.localhost.com. Without using verbose output.")
   .example("$0 https://amazing.io -vt lighthouse", "Runs only a lighthouse test on amazing.io, using verbose output.")
+  .example("$0 https://amazing.io -vft lighthouse", "Runs only a lighthouse test on amazing.io, using verbose output.")
   .argv;
 
 /**
@@ -72,7 +63,7 @@ const shellExec = require("shell-exec");
 /** Contains the url regex, matcher and domain extraction */
 const urlLib = require("./url");
 const tests = require("./tests");
-const htmltopdf = require("./htmltopdf");
+const pdf = require("./pdf");
 
 const url = argv._[0] || "";
 
@@ -90,7 +81,7 @@ let nonValidOptions = [];
  */
 Object.keys(argv).map(key => {
     const standardKeys = ["_", "$0", "version", "help"];
-    const customOptions = ["v", "t", "verbose", "test"];
+    const customOptions = ["v", "t", "f", "verbose", "test", "file"];
 
     if(!standardKeys.includes(key) && !customOptions.includes(key)) {
         nonValidOptions.push(key);
@@ -111,15 +102,66 @@ if(url && urlLib.isURLValid(url)) {
     const domainOnlyURL = urlLib.domainOnlyURL(url);
 
     if(argv.test && argv.test === "lighthouse") {
-        htmltopdf.generate("lighthouse", {
-            url,
-            pwaScore: 89,
-            performanceScore: 69,
-            accessibilityScore: 78,
-            bestPracticesScore: 68,
-            seoScore: 68
-        }, );
-        tests.run.lighthouse(argv, url);
+
+        if(argv.file !== "") {
+            pdf.generate("lighthouse", {
+                url,
+                pathToLighthouseReport: "/Users/ekramer/Desktop/audit-cli/report-1516489652.html",
+                scores: {
+                    pwa: {
+                        score: 89,
+                        class: "good"
+                    },
+                    performance: {
+                        score: 69,
+                        class: "ok",
+                    },
+                    accessibility: {
+                        score: 78,
+                        class: "ok"
+                    },
+                    bestPractices: {
+                        score: 68,
+                        class: "ok"
+                    },
+                    seo: {
+                        score: 68,
+                        class: "ok"
+                    }
+                },
+                metrics: [
+                    {
+                        name: "Performance",
+                        grade: "is poor",
+                        class: "poor"
+                    },
+                    {
+                        name: "Best Practices",
+                        grade: "needs improvement",
+                        class: "ok"
+                    }
+                ],
+                vulns: {
+                    total: 4,
+                    vulns: [
+                        {
+                            libraryVersion: "jQuery@2.1.0",
+                            vulnCount: 2,
+                            highestSeverity: "Low",
+                            url: "http://url.com"
+                        },
+                        {
+                            libraryVersion: "jQuery@1.8.0",
+                            vulnCount: 2,
+                            highestSeverity: "High",
+                            url: "http://url.com"
+                        }
+                    ]
+                }
+            }, argv.file);
+        }
+
+        //tests.run.lighthouse(argv, url);
     } else if(argv.test && argv.test === "observatory") {
         tests.run.observatory(argv, domainOnlyURL);
     } else {
