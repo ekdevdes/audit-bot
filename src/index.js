@@ -103,60 +103,28 @@ if(url && urlLib.isURLValid(url)) {
     if(argv.test && argv.test === "lighthouse") {
 
         if(argv.file !== "") {
-            pdf.generate("lighthouse", {
+            pdf.generate("observatory", {
                 url,
-                pathToLighthouseReport: "/Users/ekramer/Desktop/audit-cli/report-1516489652.html",
-                scores: {
-                    pwa: {
-                        score: 89,
-                        class: "good"
-                    },
-                    performance: {
-                        score: 69,
-                        class: "ok",
-                    },
-                    accessibility: {
-                        score: 78,
-                        class: "ok"
-                    },
-                    bestPractices: {
-                        score: 68,
-                        class: "ok"
-                    },
-                    seo: {
-                        score: 68,
-                        class: "ok"
-                    }
-                },
-                metrics: [
+                score: 0,
+                grade: "F",
+                rules: [
                     {
-                        name: "Performance",
-                        grade: "is poor",
-                        class: "poor"
+                        score: -25,
+                        slug: "content-security-policy",
+                        desc: "Content Security Policy (CSP) header not implemented",
+                        result: "csp-not-implemented",
+                        isPassed: false,
+                        class: "red"
                     },
                     {
-                        name: "Best Practices",
-                        grade: "needs improvement",
-                        class: "ok"
+                        score: -25,
+                        slug: "redirection",
+                        desc: "Does not redirect to an https site",
+                        result: "redirection-missing",
+                        isPassed: false,
+                        class: "red"
                     }
-                ],
-                vulns: {
-                    total: 4,
-                    vulns: [
-                        {
-                            libraryVersion: "jQuery@2.1.0",
-                            vulnCount: 2,
-                            highestSeverity: "Low",
-                            url: "http://url.com"
-                        },
-                        {
-                            libraryVersion: "jQuery@1.8.0",
-                            vulnCount: 2,
-                            highestSeverity: "High",
-                            url: "http://url.com"
-                        }
-                    ]
-                }
+                ]
             }, argv.file);
         }
 

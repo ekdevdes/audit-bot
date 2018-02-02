@@ -25,6 +25,8 @@ const chalk = require("chalk");
  */
 const shellExec = require("shell-exec");
 
+const urlLib = require("./url");
+
 const unixTimeStamp = unix(new Date());
 
 module.exports = {
@@ -49,6 +51,7 @@ module.exports = {
             'url',
             'score',
             'grade',
+            'host',
             'section.obsRule'
         ],
         // this key is basically a concatenation of the lighthouse and observatory
@@ -125,8 +128,13 @@ module.exports = {
             const replacement = data.replace(regex, match => {
                 const rawMatch = this.trimCurlyBraces(match);
 
-                if(rawMatch == "url" || rawMatch == "pathToLighthouseReport"){
+                if(rawMatch == "url" || 
+                    rawMatch == "pathToLighthouseReport" ||
+                    rawMatch == "score" ||
+                    rawMatch == "grade"){
+
                     return values[rawMatch];
+
                 } else if(rawMatch.includes("scores.")) {
                     const keys = rawMatch.replace("scores.", "").split(".");
                     const testName = keys[0];
@@ -179,6 +187,33 @@ module.exports = {
                     });
 
                     return vulnsFileData.replace("{{vuln}}", tds).replace("{{vuln.counts}}", values.vulns.total);
+                } else if(rawMatch === "host") {
+                    return urlLib.domainOnlyURL(values.url);
+                } else if(rawMatch === "section.obsRule") {
+                    const obsFileData = fs.readFileSync(path.resolve(__dirname, "blocks/obsRule.html"), "utf8");
+                    let tds = "";
+
+                    values.rules.map(rule => {
+                        tds += obsFileData.replace(this.regexFor("section.obsRule").regex, match => {
+                            const rawMatch = this.trimCurlyBraces(match);
+
+                            if(rawMatch === "rule.score") {
+                                return rule.score;
+                            } else if (rawMatch === "rule.class") {
+                                return rule.class;
+                            } else if (rawMatch === "rule.slug") {
+                                return rule.slug;
+                            } else if (rawMatch === "rule.desc") {
+                                return rule.desc;
+                            } else if (rawMatch === "rule.result") {
+                                return rule.result;
+                            } else if (rawMatch === "rule.isPassed") {
+                                return (rule.isPassed) ? "\u2714" : "\u2718";
+                            }
+                        });
+                    });
+
+                    return tds;
                 }
             });
 
