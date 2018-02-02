@@ -60,7 +60,6 @@ const argv = require('yargs')
  */
 const shellExec = require("shell-exec");
 
-/** Contains the url regex, matcher and domain extraction */
 const urlLib = require("./url");
 const tests = require("./tests");
 const pdf = require("./pdf");
@@ -75,7 +74,7 @@ const url = argv._[0] || "";
 let nonValidOptions = [];
 
 /**
- * map through the argv object that has the list of potential options for the command
+ * Map through the argv object that has the list of potential options for the command
  * and the actual passed in option and create an array of keys that aren't help, only or verbose
  * save them to an array and if that array is not empty we have passed in an invalid option
  */
@@ -89,7 +88,7 @@ Object.keys(argv).map(key => {
 });
 
 /** If we have any invalid options that were passed into the command error out */
-if(nonValidOptions.length > 0) {
+if(nonValidOptions.length) {
     const optsMsg = nonValidOptions.map(opt => `"${opt}"`).join(", ");
     const optsMsgEnding = (nonValidOptions.length > 1) ? "are not valid options" : "is not a valid option";
 
@@ -161,7 +160,7 @@ if(url && urlLib.isURLValid(url)) {
             }, argv.file);
         }
 
-        //tests.run.lighthouse(argv, url);
+       // tests.run.lighthouse(argv, url);
     } else if(argv.test && argv.test === "observatory") {
         tests.run.observatory(argv, domainOnlyURL);
     } else {
