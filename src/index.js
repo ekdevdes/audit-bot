@@ -3,7 +3,9 @@
  /**
   * TODOS
   *
-  * The tests.run.all method works...but it takes 5ever. Both the lighthouse and tests.run.all
+  * Integrate PDF generation into tests.run.lighthouse and tests.run.all
+  * Integrate the google mobile friendliness test API into the lighthouse test
+  * Style the PDF output more 
   */
 
 /**
