@@ -3,9 +3,9 @@
  /**
   * TODOS
   *
-  * Integrate PDF generation into tests.run.lighthouse and tests.run.all
+  * Integrate PDF generation into tests.run.all
   * Integrate the google mobile friendliness test API into the lighthouse test
-  * Style the PDF output more 
+  * Style the PDFs output more 
   */
 
 /**

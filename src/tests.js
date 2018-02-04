@@ -62,6 +62,38 @@ module.exports = {
          * @param {string} url url to test
          */
         lighthouse(args, url) {
+            let pdfGenData = {
+                url,
+                pathToLighthouseReport: "",
+                scores: {
+                    pwa: {
+                        score: "",
+                        class: ""
+                    },
+                    performance: {
+                        score: "",
+                        class: ""
+                    },
+                    accessibility: {
+                        score: "",
+                        class: ""
+                    },
+                    bestPractices: {
+                        score: "",
+                        class: ""
+                    },
+                    seo: {
+                        score: "",
+                        class: ""
+                    },
+                },
+                metrics: [],
+                vulns: {
+                    total: "",
+                    vulns: []
+                }
+            }
+
             /**
              * What scores for each metric of each test will result in a pass, fail or average result
              * 
@@ -157,19 +189,48 @@ module.exports = {
                     
                     resultsSpinner.stop();
                     console.log(`${chalk.cyan.bold("\nGoogle Lighthouse Report")}: ${parsedJSON.url}\nAll scores are out of 100. For more details on the contents of each section of this report please check out the full report at ${chalk.cyan.bold.underline(path.resolve(`./report-${unixTimeStamp}.html`))}.\n`);
+                    pdfGenData.pathToLighthouseReport = path.resolve(`./report-${unixTimeStamp}.html`);
+
+                    let metrics = [];
                 
                     parsedJSON.reportCategories.forEach(el => {
                 
+                        let metricObj = {};
+
                         /**
                          * The scores for each category include decimal values, we don't really need 
                          * to be that precise, so we're rounding up to the closes whole number
                          */
                         let score = Math.ceil(el.score);
+
+                        if(el.name === "Performance") {
+                            pdfGenData.scores.performance.score = score;
+                        } else if(el.name === "Progressive Web App") {
+                            pdfGenData.scores.pwa.score = score;
+                        } else if(el.name === "Accessibility") {
+                            pdfGenData.scores.accessibility.score = score;
+                        } else if(el.name === "Best Practices") {
+                            pdfGenData.scores.bestPractices.score = score;
+                        } else if(el.name === "SEO") {
+                            pdfGenData.scores.seo.score = score;
+                        }
                 
                         if(el.score >= ratings.pass) {
-                
+
                             /** Highlight passing scores green and bold */
                             score = chalk.green.bold(score);
+
+                            if(el.name === "Performance") {
+                                pdfGenData.scores.performance.class = "good";
+                            } else if(el.name === "Progressive Web App") {
+                                pdfGenData.scores.pwa.class = "good";
+                            } else if(el.name === "Accessibility") {
+                                pdfGenData.scores.accessibility.class = "good";
+                            } else if(el.name === "Best Practices") {
+                                pdfGenData.scores.bestPractices.class = "good";
+                            } else if(el.name === "SEO") {
+                                pdfGenData.scores.seo.class = "good";
+                            }
                 
                         } else if(el.score > ratings.fail && el.score <= ratings.pass) {
                 
@@ -177,18 +238,55 @@ module.exports = {
                             score = chalk.yellow.bold(score);
                             notes = `${notes}* Your score for the ${chalk.bgYellow.black.bold(`"${el.name}" metric needs improvement`)}. Please consult the ${chalk.cyan.bold.underline(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on what to improve.\n`;
                 
+                            if(el.name === "Performance") {
+                                pdfGenData.scores.performance.class = "ok";
+                            } else if(el.name === "Progressive Web App") {
+                                pdfGenData.scores.pwa.class = "ok";
+                            } else if(el.name === "Accessibility") {
+                                pdfGenData.scores.accessibility.class = "ok";
+                            } else if(el.name === "Best Practices") {
+                                pdfGenData.scores.bestPractices.class = "ok";
+                            } else if(el.name === "SEO") {
+                                pdfGenData.scores.seo.class = "ok";
+                            }
+                            
+                            metricObj.name = el.name;
+                            metricObj.grade = "needs improvement";
+                            metricObj.class = "ok";
+
                         } else if(el.score <= ratings.fail) {
                             
                             /** Highlight failing scores red and bold */
                             score = chalk.red.bold(score);
                             notes = `${notes}* Your score for the ${chalk.bgRed.white.bold(`"${el.name}" metric is poor`)}. Please consult the ${chalk.cyan.bold.underline(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on how to improve it.\n`;
+
+                            if(el.name === "Performance") {
+                                pdfGenData.scores.performance.class = "poor";
+                            } else if(el.name === "Progressive Web App") {
+                                pdfGenData.scores.pwa.class = "poor";
+                            } else if(el.name === "Accessibility") {
+                                pdfGenData.scores.accessibility.class = "poor";
+                            } else if(el.name === "Best Practices") {
+                                pdfGenData.scores.bestPractices.class = "poor";
+                            } else if(el.name === "SEO") {
+                                pdfGenData.scores.seo.class = "poor";
+                            }
+
+                            metricObj.name = el.name;
+                            metricObj.grade = "is poor";
+                            metricObj.class = "poor";
                         }
-                
-                        //console.log(`${score}\t${el.name}`);
+                        
+                        metrics.push(metricObj);
+                        
                         t.cell("Score", score);
                         t.cell("Metric", el.name);
                         t.newRow();
                     });
+
+                    // filter out empty objects (caused by passed tests) before assigning it to pdfGenData
+                    metrics = metrics.filter(metric => Object.keys(metric).length !== 0);
+                    pdfGenData.metrics = metrics;
 
                     console.log(t.toString());
                     console.log(notes);
@@ -202,6 +300,8 @@ module.exports = {
                     if(!vulnerabilities.score) {
                         console.log(`${chalk.cyan.bold("Included front-end JavaScript libraries with known security vulnerabilities:")}`);
                         console.log(chalk.bgRed.bold.white(vulnerabilities.displayValue) + "\n");
+
+                        let vulns = [];
                         
                         const vulnTable = new easyTable;
                         
@@ -210,6 +310,13 @@ module.exports = {
                             let vulnCount = el.vulnCount;
                             let url = el.pkgLink;
                             let sev = el.highestSeverity;
+
+                            vulns.push({
+                                libraryVersion: lib,
+                                vulnCount,
+                                highestSeverity: sev,
+                                url
+                            });
 
                             if(el.highestSeverity === "Medium") {
                                 lib = chalk.yellow.bold(lib);
@@ -230,8 +337,12 @@ module.exports = {
                             vulnTable.newRow();
                         });
                         
+                        pdfGenData.vulns.vulns = vulns;
+                        pdfGenData.vulns.total = pdfGenData.vulns.vulns.length;
                         console.log(vulnTable.toString());
                     }
+                    
+                    pdf.generate("lighthouse", pdfGenData, args.f);
                 });
             });
 
@@ -298,8 +409,7 @@ module.exports = {
                                      filteredLines = lines.filter(line => !line.includes("observatory [WARN]")),
                                      cleanData = filteredLines.join("\n"),
                                      parsedData = JSON.parse(cleanData),
-                                     obsTable = new easyTable,
-                                     detailTable = new easyTable;
+                                     obsTable = new easyTable;
 
                                 resultsSpinner.stop().clear();
                                 console.log(`${chalk.cyan.bold("\nMozilla Observatory Security Report: ")} ${url}\n`);
@@ -308,14 +418,10 @@ module.exports = {
                                     const test = parsedData[prop];
 
                                     obsTable.cell("Score", test.score_modifier);
-                                    obsTable.cell("Rule", chalk.red.bold(test.name))
+                                    obsTable.cell("Rule", chalk.red.bold(pdf.formatObsRule(test.name)))
                                     obsTable.cell("Description", test.score_description);
                                     obsTable.cell("Pass?", (test.pass ? chalk.green.bold("\u2714") : chalk.red.bold("\u2718")));
                                     obsTable.newRow();
-
-                                    detailTable.cell("Rule", chalk.red.bold(test.name));
-                                    detailTable.cell("Result", test.result);
-                                    detailTable.newRow();
 
                                     pdfGenData.rules.push({
                                         score: test.score_modifier,
@@ -328,8 +434,6 @@ module.exports = {
 
                                 console.log(chalk.cyan.bold("Overview"));
                                 console.log(obsTable.toString());
-                                console.log(chalk.cyan.bold("More Details"));
-                                console.log(detailTable.toString());
 
                                 fs.readFile(`report-${unixTimeStamp}-observatory.txt`, "utf8", (err, data) => {
                                     if(err) {
@@ -732,8 +836,7 @@ module.exports = {
                                                 filteredLines = lines.filter(line => !line.includes("observatory [WARN]")),
                                                 cleanData = filteredLines.join("\n"),
                                                 parsedData = JSON.parse(cleanData),
-                                                obsTable = new easyTable,
-                                                detailTable = new easyTable;
+                                                obsTable = new easyTable;
 
                                             console.log(`${chalk.cyan.bold("\nMozilla Observatory Security Report: ")} ${domainOnlyURL}\n`);
 
@@ -741,20 +844,14 @@ module.exports = {
                                                 const test = parsedData[prop];
 
                                                 obsTable.cell("Score", test.score_modifier);
-                                                obsTable.cell("Rule", chalk.red.bold(test.name))
+                                                obsTable.cell("Rule", chalk.red.bold(pdf.formatObsRule(test.name)));
                                                 obsTable.cell("Description", test.score_description);
                                                 obsTable.cell("Pass?", (test.pass ? chalk.green.bold("\u2714") : chalk.red.bold("\u2718")));
                                                 obsTable.newRow();
-
-                                                detailTable.cell("Rule", chalk.red.bold(test.name));
-                                                detailTable.cell("Result", test.result);
-                                                detailTable.newRow();
                                             }
                                             
                                             console.log(chalk.cyan.bold("Overview"));
                                             console.log(obsTable.toString());
-                                            console.log(chalk.cyan.bold("More Details"));
-                                            console.log(detailTable.toString());
 
                                             fs.readFile(`report-${unixTimeStamp}-observatory.txt`, "utf8", (err, data) => {
                                                 if(err) {
