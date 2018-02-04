@@ -7,6 +7,7 @@ module.exports = {
     },
     domainOnlyURL(url) {
         const rx = /(https?):\/\/([a-zA-Z0-9-_.]{2,63}):?([0-9]{4,5})?\/?(\#)?([\/a-zA-Z0-9-_.]{1,})?\??([a-zA-Z0-9&-_.=]{1,})?/g;
+
         return rx.exec(url)[2];
     },
     isLocal(url) {

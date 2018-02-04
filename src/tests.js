@@ -50,8 +50,8 @@ const easyTable = require("easy-table");
  */
 const unix = require("to-unix-timestamp");
 
-/** Contains the url regex, matcher and domain extraction */
 const urlLib = require("./url");
+const pdf = require("./pdf");
 
 module.exports = {
     run: {
@@ -245,6 +245,13 @@ module.exports = {
          */
         observatory(args, url) {
 
+            const pdfGenData = {
+                url,
+                score: "",
+                grade: "",
+                rules: []
+            }
+
             const spinner = ora({
                 text: "Running through tests...",
                 spinner: "moon",
@@ -309,8 +316,16 @@ module.exports = {
                                     detailTable.cell("Rule", chalk.red.bold(test.name));
                                     detailTable.cell("Result", test.result);
                                     detailTable.newRow();
+
+                                    pdfGenData.rules.push({
+                                        score: test.score_modifier,
+                                        slug: test.name,
+                                        desc: test.score_description,
+                                        isPassed: test.pass,
+                                        class: (test.pass) ? "green" : "red"
+                                    });
                                 }
-                                
+
                                 console.log(chalk.cyan.bold("Overview"));
                                 console.log(obsTable.toString());
                                 console.log(chalk.cyan.bold("More Details"));
@@ -331,12 +346,17 @@ module.exports = {
                                             }
                                         });
 
+                                    pdfGenData.score = cleanData[0];
+                                    pdfGenData.grade = cleanData[1];
+
                                     const observatoryURL = `https://observatory.mozilla.org/analyze.html?host=${url}`;
 
                                     console.log(`${chalk.cyan.bold("Score: ")} ${cleanData[0]}\n${chalk.cyan.bold("Grade: ")} ${cleanData[1]}\n`);
                                     console.log(`For more details on the contents of each section of this report please check out the full report at ${chalk.cyan.bold.underline(observatoryURL)}.`);
                                     console.log(`Additionally please consult this page for answered to commonly asked questions about Mozilla's Observatory Security Report ${chalk.cyan.bold.underline("https://observatory.mozilla.org/faq.html")}.\n`);
                                     
+                                    pdf.generate("observatory", pdfGenData, args.f);
+
                                     /**
                                      * Remove the generated files since we don't need them anymore
                                      */
@@ -361,7 +381,7 @@ module.exports = {
                 spinner: "weather",
                 color: "green"
             }); 
-            let isLocalURL = (urlLib.isLocal(url));
+            let isLocalURL = urlLib.isLocal(url);
 
             /**
              * What scores for each metric of each test will result in a pass, fail or average result
@@ -383,7 +403,7 @@ module.exports = {
                 lighthouseCommand = `lighthouse ${url} --chrome-flags="--headless" --output=html --output-path=./report-${unixTimeStamp}.html`;
             }
             
-            /** If the url passed in a localhost URL let the user now that Mozilla's observatory doesn't support localhost URLs */
+            /** If the url passed in a localhost URL let the user know that Mozilla's observatory doesn't support localhost URLs */
             if(isLocalURL){
                 console.log(chalk.bgYellow.black.bold("[WARN] Mozilla Observatory doesn't support localhost URLs. Only running Google Lighthouse tests."));
             }

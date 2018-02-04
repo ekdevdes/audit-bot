@@ -6,6 +6,7 @@
     <style>
         html, body {
             font-family: sans-serif;
+            padding: 7px 5px 0 5px;
         }
 
         table {
@@ -64,14 +65,13 @@
     </style>
 </head>
 <body>
-    <h1>Mozilla Observatory Report: <a href="{{url}}">{{url}}</a></h1>
+    <h1>Mozilla Observatory Report: <a href="http://{{url}}">{{url}}</a></h1>
     <table>
         <thead>
           <tr>
             <th>Score</th>
             <th>Rule</th>
             <th>Description</th>
-            <th>Result</th>
             <th>Pass?</th>
           </tr>
         </thead>
@@ -86,6 +86,7 @@
         </div>
         <div class="info">
             <p>For more details on the contents of each section of this report please check out the full report at <a href="https://observatory.mozilla.org/analyze.html?host={{host}}">https://observatory.mozilla.org/analyze.html?host={{host}}</a>.</p>
+            <br>
             <p>Additionally please consult this page for answered to commonly asked questions about Mozilla's Observatory Security Report <a href="https://observatory.mozilla.org/faq.html">https://observatory.mozilla.org/faq.html</a>.</p>
         </div>
       </section>

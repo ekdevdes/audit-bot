@@ -3,10 +3,7 @@
  /**
   * TODOS
   *
-  * TODO: In fixing the issue with the url regexp that existed previously, I broke the test.run.all method
-  *
-  * TODO: Finish pdf.js to generate a pdf for observatory test results and "all" test results and move the 
-  * call to pdf.generate(...) to tests.js until after we've gathered all the test data
+  * The tests.run.all method works...but it takes 5ever. Both the lighthouse and tests.run.all
   */
 
 /**
@@ -62,7 +59,6 @@ const shellExec = require("shell-exec");
 
 const urlLib = require("./url");
 const tests = require("./tests");
-const pdf = require("./pdf");
 
 const url = argv._[0] || "";
 
@@ -101,34 +97,7 @@ if(url && urlLib.isURLValid(url)) {
     const domainOnlyURL = urlLib.domainOnlyURL(url);
 
     if(argv.test && argv.test === "lighthouse") {
-
-        if(argv.file !== "") {
-            pdf.generate("observatory", {
-                url,
-                score: 0,
-                grade: "F",
-                rules: [
-                    {
-                        score: -25,
-                        slug: "content-security-policy",
-                        desc: "Content Security Policy (CSP) header not implemented",
-                        result: "csp-not-implemented",
-                        isPassed: false,
-                        class: "red"
-                    },
-                    {
-                        score: -25,
-                        slug: "redirection",
-                        desc: "Does not redirect to an https site",
-                        result: "redirection-missing",
-                        isPassed: false,
-                        class: "red"
-                    }
-                ]
-            }, argv.file);
-        }
-
-       // tests.run.lighthouse(argv, url);
+       tests.run.lighthouse(argv, url);
     } else if(argv.test && argv.test === "observatory") {
         tests.run.observatory(argv, domainOnlyURL);
     } else {
