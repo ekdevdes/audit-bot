@@ -130,11 +130,10 @@ module.exports = {
         if(pdfPath !== "") {
             const spinner = ora({
                 text: "Generating PDF...",
-                color: "green"
+                color: "blue"
             }); 
     
             spinner.start();    
-
 
             fs.readFile(path.resolve(__dirname, `templates/${testName}.html`), "utf8", (err, data) => {
                 if(err) {
