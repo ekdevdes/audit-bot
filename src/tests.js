@@ -1,892 +1,337 @@
-const fs = require("fs");
+// Libraries
 const path = require("path");
+const exec = require("shell-exec"); // used to exec cli commands like lighthouse and observatory
+const chalk = require("chalk"); // allows colorful console logs
+const ora = require("ora"); // colorful cli spinners
+const easyTable = require("easy-table"); // easily output tables in the cli
+const unix = require("to-unix-timestamp"); // get the current unix timestamp
+const bluebird = require("bluebird"); // library for "promisifying" all functions of a module
+const fs = bluebird.promisifyAll(require("fs")); // Promisify thge "fs" module (http://bit.ly/2H77JXE)
+const on = require("await-handler") // easily destructure a async/await err and response
 
-/**
- * A the library we're going to use to pull the lighthouse report result JSON out of the HTML report the 
- * cli tool generates
- * 
- * @var {function} jsdom
- * @see https://www.npmjs.com/package/jsdom
- */
-const { JSDOM } = require("jsdom");
+// Local Libs
+const urlFormatter = require("./helpers/url"); // run simple tests on urls (e.g whether its local or not, get only the domain)
+const { 
+    logWarning,
+    logError,
+    formatFileName,
+    logMultilineMsg,
+    logNewLine,
+    formatRuleName
+} = require("./helpers/logger"); // logs warnings and errors to the console using chalk.js for pretty errors
+const pdf = require("./helpers/pdf"); // generates a pdf from passed in object data and applies it to html templates to create the pdf
+const ratings = require("./helpers/ratings")(); // maps a test's score to its grade (e.g. 80 = fail, 70 = average, 60 = fail)
 
-/**
- * The library we're using to execute the "lighthouse" and "observatory" cli commands from node
- * 
- * @var {function} shellExec
- * @see https://www.npmjs.com/package/shell-exec
- */
-const shellExec = require("shell-exec");
+const unixTimeStamp = unix(new Date()); // a unique unix timestamp
 
-/**
- * The library we're using for colorful console.logs (e.g. changing text color, text bg color)
- * 
- * @var {object} chalk
- * @see https://www.npmjs.com/package/chalk
- */
-const chalk = require("chalk");
+// opts: the command line options passed in
+// url: url to run test on
+async function lighthouse(opts, url) {
 
-/**
- * Colorful CLI Spinners 
- * 
- * @var {function} ora
- * @see https://github.com/sindresorhus/ora
- */
-const ora = require("ora");
+    let cmd = `lighthouse ${url} --chrome-flags="--headless" --quiet --output=html --output-path=./report-${unixTimeStamp}.html`;
+    const spinner = ora({
+        text: "Running lighthouse tests...",
+        spinner: "weather"
+    }); 
 
-/**
- * Colorful CLI Spinners 
- * 
- * @var {object} easyTable
- * @see https://www.npmjs.com/package/easy-table
- */
-const easyTable = require("easy-table");
+    // if the user specified the verbose option turn off the "quiet" option in lighthouse
+    if(opts.verbose) {
+        cmd = `lighthouse ${url} --chrome-flags="--headless" --output=html --output-path=./report-${unixTimeStamp}.html`;
+    } else {
+        // if the user didn't specify the "verbose" option then we'll show a litle emoji spinner instead while we crunch the numbers
+        
+        spinner.start();
+    }
 
-/**
- * Used to easily get the current unix timestamp 
- * 
- * @var {function} unix
- * @see https://www.npmjs.com/package/to-unix-timestamp
- */
-const unix = require("to-unix-timestamp");
+    const [err, resp] = await on(exec(cmd));
 
-const urlLib = require("./url");
-const pdf = require("./pdf");
+    if(err) {
+        spinner.stop().clear();
+
+        logError(err.message);
+    }
+
+    spinner.stop().clear();
+
+    // start another spinner while we format the results
+    const resultsSpinner = ora({
+        text: "Formatting results...",
+        spinner: "earth"
+    });
+
+    resultsSpinner.start();
+
+
+    let [fileErr, contents] = await on(fs.readFileAsync(`report-${unixTimeStamp}.html`));
+    
+    if (fileErr) {
+        resultsSpinner.stop().clear();
+
+        logError(err.message.replace("Error: ", ""));
+    }
+
+    resultsSpinner.stop().clear();
+    
+    // convert the buffer obtained as a result to a string
+    contents = contents.toString("utf8");
+
+    const scriptRegex = /<script>(.+)<\/script>/g;
+    const scriptMatches = scriptRegex.exec(contents);
+
+    // the JSON result of the lighthouse test saved as the second script tag inside the generated lighthouse html file
+    const testResult = JSON.parse(scriptMatches[1].substring(0, scriptMatches[1].length - 1).replace("window.__LIGHTHOUSE_JSON__ = ", ""));
+
+    // if the user passed in the "verbose" option add an extra line of padding between the end of the lighthouse logs and and the beginning of our test results
+    if(opts.verbose) {
+        logNewLine();
+    }
+
+    logMultilineMsg([
+        `${chalk.cyan.bold("\nGoogle Lighthouse Report")}: ${testResult.url}`,
+        `All scores are out of 100. For more details on the contents of each section of this report please check out the full report at ${formatFileName(path.resolve(`./report-${unixTimeStamp}.html`))}.\n`
+    ]);
+
+    const table = new easyTable;
+    let notes = [`${chalk.cyan.bold("Notes:")}\n`];
+
+    // loop over each category of the lighthouse test and pull out the score and write some notes for each category
+    testResult.reportCategories.map(category => {
+        let score = Math.ceil(category.score); // round the category score ot the nearest whole number
+
+        if(category.score >= ratings.pass) {
+            score = chalk.green.bold(score);
+        } else if(category.score > ratings.fail && category.score <= ratings.pass) {
+            score = chalk.yellow.bold(score);
+            notes.push(`* Your score for the ${chalk.bgYellow.black.bold(`"${category.name}" metric needs improvement`)}. Please consult the ${formatFileName(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on what to improve.`);
+        } else if(category.score <= ratings.fail) {
+            score = chalk.red.bold(score);
+            notes.push(`* Your score for the ${chalk.bgRed.white.bold(`"${category.name}" metric is poor`)}. Please consult the ${formatFileName(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on how to improve it`);
+        }
+
+        table.cell("Score", score);
+        table.cell("Metric", category.name);
+        table.newRow();
+    });
+
+    console.log(table.toString());
+    logMultilineMsg(notes);
+
+    // get the vulnerable libraries being used in the passed in URL
+    let vulnerabilities = testResult.reportCategories[3].audits[9].result;
+
+    // if we have any vulnerable libraries used in the passed in url...the test name is "no vulnerable libraries"
+    if(!vulnerabilities.score) {
+
+        let vulns = [];
+        const vulnTable = new easyTable;
+
+        // add a line of padding between the notes and the vulnerabilities
+        logNewLine();
+
+        logMultilineMsg([
+            `${chalk.cyan.bold("Included front-end JavaScript libraries with known security vulnerabilities:")}`,
+            chalk.bgRed.bold.white(vulnerabilities.displayValue)
+        ]);
+
+        // add a line of padding between the number of vulnerabilities header and the vulnerabilites table
+        logNewLine();
+
+        vulnerabilities.extendedInfo.vulnerabilities.map(vuln => {
+            let lib = `${vuln.name}@${vuln.version}`;
+            let vulnCount = vuln.vulnCount;
+            let url = vuln.pkgLink;
+            let sev = vuln.highestSeverity;
+
+            vulns.push({
+                libraryVersion: lib,
+                vulnCount,
+                highestSeverity: sev,
+                url
+            });
+
+            if(vuln.highestSeverity === "Medium") {
+                lib = chalk.yellow.bold(lib);
+                vulnCount = chalk.yellow.bold(vulnCount);
+                url = chalk.yellow.bold.underline(vuln.pkgLink);
+                sev = chalk.yellow.bold(sev);
+            } else if(vuln.highestSeverity === "High") {
+                lib = chalk.red.bold(lib);
+                vulnCount = chalk.red.bold(vulnCount);
+                url = chalk.red.bold.underline(url);
+                sev = chalk.red.bold(sev);
+            }
+
+            vulnTable.cell("Library Version", lib);
+            vulnTable.cell("Vulnerability Count", vulnCount);
+            vulnTable.cell("Highest Severity", sev);
+            vulnTable.cell("URL", url);
+            vulnTable.newRow();
+        });
+
+        console.log(vulnTable.toString());
+    }
+
+    // Add a line of padding so that when the all method calls this function there will be space between this output and the next test output
+    logNewLine();
+}
+
+// opts: the command line options passed in
+// url: url to run test on
+async function observatory(opts, url) {
+
+    // lets show a little emoji spinner while we run the test
+    const spinner = ora({
+        text: "Running observatory tests...",
+        spinner: "moon"
+    }); 
+
+    // if the user passed in a localhost URL we'll simply tell them that observatory doesn't support localhost URLs and then stop execution of the function
+    if(urlFormatter.isLocal(url)) {
+        logWarning("Localhost URL detected, Mozilla Observatory does not support localhost URLs, aborting test...")
+
+        return;
+    }
+
+    spinner.start();
+
+    const [err, resp] = await on(exec(`observatory ${urlFormatter.domainOnlyURL(url)} --format=json &>report-${unixTimeStamp}-observatory.json`));
+
+    if(err) {
+        spinner.stop().clear();
+
+        logError(err.message);
+    }
+    
+    // get the data on the various security rules not being followed from the generated JSON file
+    let [fileErr, contents] = await on(fs.readFileAsync(`report-${unixTimeStamp}-observatory.json`));
+
+    if(fileErr) {
+        spinner.stop().clear();
+
+        logError(err.message.replace("Error: ", ""));
+    }
+
+    contents = contents.toString("utf8");
+
+    // account for errors thrown by the command and innerrantly saved in JSON file
+    if(contents.includes("observatory [ERROR]")) {
+        spinner.stop().clear();
+
+        logError(contents.replace("observatory [ERROR] ", "").replace("Error: ", ""));
+    }
+
+    // unfortunately the JSON output we got earlier doesn't include the test's overall score or grade...but this txt file will...
+    let [txtErr, txtContents] = await on(exec(`observatory ${urlFormatter.domainOnlyURL(url)} --format=csv &>report-${unixTimeStamp}-observatory.txt`));
+
+    if(txtErr) {
+        spinner.stop().clear();
+
+        logError(txtErr.message);
+    }
+
+    spinner.stop().clear();
+
+    // create another little emoji spinner to display to the user while we parse all these test results
+    const resultsSpinner = ora({
+        text: "Formatting results...",
+        spinner: "earth"
+    });
+    resultsSpinner.start();
+
+    let [jsonErr, jsonContents] = await on(fs.readFileAsync(`report-${unixTimeStamp}-observatory.json`));
+
+    if(jsonErr) {
+        resultsSpinner.stop().clear();
+
+        logError(err.message.replace("Error: ", ""));
+    }
+
+    jsonContents = jsonContents.toString("utf8");
+
+    resultsSpinner.stop().clear();
+    const lines = jsonContents.split("\n"),
+        filteredLines = lines.filter(line => !line.includes("observatory [WARN]")),
+        cleanData = filteredLines.join("\n"),
+        parsedData = JSON.parse(cleanData),
+        obsTable = new easyTable;
+
+    console.log(`${chalk.cyan.bold("\nMozilla Observatory Security Report: ")} ${url}`);
+
+    // add a line of padding between the test header and the results table
+    logNewLine();
+    
+    // loop through each rule that the passed in URL didn't comply too
+    for(let prop in parsedData) {
+        const test = parsedData[prop];
+
+        obsTable.cell("Score", test.score_modifier);
+        obsTable.cell("Rule", chalk.red.bold(formatRuleName(test.name)));
+        obsTable.cell("Description", test.score_description);
+        obsTable.cell("Pass?", (test.pass ? chalk.green.bold("\u2714") : chalk.red.bold("\u2718")));
+        obsTable.newRow();
+    }
+
+    console.log(obsTable.toString());
+
+    let [txtReadErr, txtReadContents] = await on(fs.readFileAsync(`report-${unixTimeStamp}-observatory.txt`));
+
+    if(txtReadErr) {
+        logError(err.message.replace("Error: ", ""));
+    }
+
+    txtReadContents = txtReadContents.toString("utf8");
+
+    var txtLines = txtReadContents.split("\n"),
+        txtfilteredLines = txtLines.filter(line => (line.includes("Score: ") || line.includes("Grade: "))),
+        txtCleanData = txtfilteredLines.map(line => {
+            if(line.includes("Score: ")){
+                return line.replace("Score: ", "");
+            } else {
+                return line.replace("Grade: ", "");
+            }
+        });
+
+    logMultilineMsg([
+        `${chalk.cyan.bold("Score: ")} ${txtCleanData[0]}`,
+        `${chalk.cyan.bold("Grade: ")} ${txtCleanData[1]}`
+    ]);
+
+    // add a line of padding betwen the score and the more details messages
+    logNewLine();
+
+    console.log(`For more details on the contents of each section of this report please check out the full report at ${formatFileName(`https://observatory.mozilla.org/analyze.html?host=${urlFormatter.domainOnlyURL(url)}`)}.`);
+    console.log(`Additionally please consult this page for answered to commonly asked questions about Mozilla's Observatory Security Report ${formatFileName("https://observatory.mozilla.org/faq.html")}.`);
+
+    // add a line of padding between the end of the test output and the begging of the next line in the cli
+    logNewLine();
+    
+    // delete the files we pulled all this data in so as not to bloat the users system with unecessary files
+    exec(`rm -rf report-${unixTimeStamp}-observatory.json report-${unixTimeStamp}-observatory.txt`);
+}
+
+// opts: the command line options passed in
+// url: url to run test on
+async function pagespeed(opts, url) {
+    console.log(opts, url, "pagespeed");
+}
+
+// opts: the command line options passed in
+// url: url to run test on
+async function all(opts, url) {
+
+    let [lerr, lresp] = await on(lighthouse(opts, url));
+    let [oerr, oresp] = await on(observatory(opts, url));
+
+    if(lerr) {
+        logError(lerr.message);
+    } else if(oerr) {
+        logError(oerr.message);
+    }
+}
 
 module.exports = {
-    run: {
-        /**
-         * Runs a lighthouse test on a given url
-         * 
-         * @param {object} argv Arguments from yargs
-         * @param {string} url url to test
-         */
-        lighthouse(args, url) {
-            let pdfGenData = {
-                url,
-                pathToLighthouseReport: "",
-                scores: {
-                    pwa: {
-                        score: "",
-                        class: ""
-                    },
-                    performance: {
-                        score: "",
-                        class: ""
-                    },
-                    accessibility: {
-                        score: "",
-                        class: ""
-                    },
-                    bestPractices: {
-                        score: "",
-                        class: ""
-                    },
-                    seo: {
-                        score: "",
-                        class: ""
-                    },
-                },
-                metrics: [],
-                vulns: {
-                    total: "",
-                    vulns: []
-                }
-            }
-
-            /**
-             * What scores for each metric of each test will result in a pass, fail or average result
-             * 
-             * @var {object} ratings
-             */
-            const ratings = {
-                pass: 80,
-                average: 70,
-                fail: 69
-            }
-
-            const unixTimeStamp = unix(new Date());
-            let lighthouseCommand = `lighthouse ${url} --chrome-flags="--headless" --quiet --output=html --output-path=./report-${unixTimeStamp}.html`;
-
-            /** Show the log from the lighthouse command if --verbose is passed in */
-            if(args.verbose) {
-                lighthouseCommand = `lighthouse ${url} --chrome-flags="--headless" --output=html --output-path=./report-${unixTimeStamp}.html`;
-            }
-
-            const spinner = ora({
-                text: "Running through tests...",
-                spinner: "weather",
-                color: "green"
-            }); 
-
-            if(!args.verbose) {
-                spinner.start();
-            }
-
-            /**
-             * Start the lighthouse reporting process, then do stuff after its finished.
-             */
-            shellExec(lighthouseCommand).then(() => {
-
-                if(!args.verbose){
-                    spinner.stop().clear();
-                }
-
-                const resultsSpinner = ora({
-                    text: "Formatting results...",
-                    spinner: "earth",
-                    color: "green"
-                });
-                resultsSpinner.start();
-
-                /**
-                 * The result of the test is an html file that we can present the user with so they can read up on they
-                 * can improve their site. But we need to know what scores they got in each category without having to
-                 * scrape the html of the report or re-run the report with json output this time. Turns out the json results 
-                 * are saved in a script tag at the bottom of the <body> of the html of the report so we're just invoking an 
-                 * instance of JSDOM to parse that JSON so we can pull out the info we need.
-                 */
-                fs.readFile(`report-${unixTimeStamp}.html`, "utf8", (err, contents) => {
-
-                    if(err) {
-                        console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
-                    }
-                
-                    const dom = new JSDOM(contents);
-                    
-                    /**
-                     * A string of the JSON data from the bottom of the <body> in the lighthouse report html
-                     * 
-                     * @var {string} theJSON
-                     */
-                    let theJSON = dom.window.document.querySelectorAll("script")[1].innerHTML.replace("window.__LIGHTHOUSE_JSON__ = ", "")
-                    
-                    /**
-                     * Remove the ";" at the end of the JSON string so we can parse it into an object
-                     */
-                    theJSON = theJSON.substring(0, theJSON.length - 1);
-                
-                    /**
-                     * The parsed version of the JSON string from above
-                     * 
-                     * @var {object} parsedJSON
-                     */
-                    const parsedJSON = JSON.parse(theJSON);
-                
-                    /**
-                     * If --verbose was passed in add some padding between the last line of the lighthouse
-                     * logs and the first line of the test results
-                     */
-                    if(args.verbose) {
-                        console.log("");
-                    }
-                
-                    /**
-                     * Logging the results of the lighthouse test
-                     */
-                    let notes = `${chalk.cyan.bold("Notes:")}\n`;
-                    const t = new easyTable;
-                    
-                    resultsSpinner.stop();
-                    console.log(`${chalk.cyan.bold("\nGoogle Lighthouse Report")}: ${parsedJSON.url}\nAll scores are out of 100. For more details on the contents of each section of this report please check out the full report at ${chalk.cyan.bold.underline(path.resolve(`./report-${unixTimeStamp}.html`))}.\n`);
-                    pdfGenData.pathToLighthouseReport = path.resolve(`./report-${unixTimeStamp}.html`);
-
-                    let metrics = [];
-                
-                    parsedJSON.reportCategories.forEach(el => {
-                
-                        let metricObj = {};
-
-                        /**
-                         * The scores for each category include decimal values, we don't really need 
-                         * to be that precise, so we're rounding up to the closes whole number
-                         */
-                        let score = Math.ceil(el.score);
-
-                        if(el.name === "Performance") {
-                            pdfGenData.scores.performance.score = score;
-                        } else if(el.name === "Progressive Web App") {
-                            pdfGenData.scores.pwa.score = score;
-                        } else if(el.name === "Accessibility") {
-                            pdfGenData.scores.accessibility.score = score;
-                        } else if(el.name === "Best Practices") {
-                            pdfGenData.scores.bestPractices.score = score;
-                        } else if(el.name === "SEO") {
-                            pdfGenData.scores.seo.score = score;
-                        }
-                
-                        if(el.score >= ratings.pass) {
-
-                            /** Highlight passing scores green and bold */
-                            score = chalk.green.bold(score);
-
-                            if(el.name === "Performance") {
-                                pdfGenData.scores.performance.class = "good";
-                            } else if(el.name === "Progressive Web App") {
-                                pdfGenData.scores.pwa.class = "good";
-                            } else if(el.name === "Accessibility") {
-                                pdfGenData.scores.accessibility.class = "good";
-                            } else if(el.name === "Best Practices") {
-                                pdfGenData.scores.bestPractices.class = "good";
-                            } else if(el.name === "SEO") {
-                                pdfGenData.scores.seo.class = "good";
-                            }
-                
-                        } else if(el.score > ratings.fail && el.score <= ratings.pass) {
-                
-                            /** Highlight average scores yellow and bold */
-                            score = chalk.yellow.bold(score);
-                            notes = `${notes}* Your score for the ${chalk.bgYellow.black.bold(`"${el.name}" metric needs improvement`)}. Please consult the ${chalk.cyan.bold.underline(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on what to improve.\n`;
-                
-                            if(el.name === "Performance") {
-                                pdfGenData.scores.performance.class = "ok";
-                            } else if(el.name === "Progressive Web App") {
-                                pdfGenData.scores.pwa.class = "ok";
-                            } else if(el.name === "Accessibility") {
-                                pdfGenData.scores.accessibility.class = "ok";
-                            } else if(el.name === "Best Practices") {
-                                pdfGenData.scores.bestPractices.class = "ok";
-                            } else if(el.name === "SEO") {
-                                pdfGenData.scores.seo.class = "ok";
-                            }
-                            
-                            metricObj.name = el.name;
-                            metricObj.grade = "needs improvement";
-                            metricObj.class = "ok";
-
-                        } else if(el.score <= ratings.fail) {
-                            
-                            /** Highlight failing scores red and bold */
-                            score = chalk.red.bold(score);
-                            notes = `${notes}* Your score for the ${chalk.bgRed.white.bold(`"${el.name}" metric is poor`)}. Please consult the ${chalk.cyan.bold.underline(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on how to improve it.\n`;
-
-                            if(el.name === "Performance") {
-                                pdfGenData.scores.performance.class = "poor";
-                            } else if(el.name === "Progressive Web App") {
-                                pdfGenData.scores.pwa.class = "poor";
-                            } else if(el.name === "Accessibility") {
-                                pdfGenData.scores.accessibility.class = "poor";
-                            } else if(el.name === "Best Practices") {
-                                pdfGenData.scores.bestPractices.class = "poor";
-                            } else if(el.name === "SEO") {
-                                pdfGenData.scores.seo.class = "poor";
-                            }
-
-                            metricObj.name = el.name;
-                            metricObj.grade = "is poor";
-                            metricObj.class = "poor";
-                        }
-                        
-                        metrics.push(metricObj);
-                        
-                        t.cell("Score", score);
-                        t.cell("Metric", el.name);
-                        t.newRow();
-                    });
-
-                    // filter out empty objects (caused by passed tests) before assigning it to pdfGenData
-                    metrics = metrics.filter(metric => Object.keys(metric).length !== 0);
-                    pdfGenData.metrics = metrics;
-
-                    console.log(t.toString());
-                    console.log(notes);
-                
-                    /**
-                     * Get the result of the "no-vulnerable-libraries" audit under the "Best Practices" section
-                     */
-                    let vulnerabilities = parsedJSON.reportCategories[3].audits[9].result;
-                
-                    /** If there are in fact vulnerable JS libraries in the passed in site let the user now */
-                    if(!vulnerabilities.score) {
-                        console.log(`${chalk.cyan.bold("Included front-end JavaScript libraries with known security vulnerabilities:")}`);
-                        console.log(chalk.bgRed.bold.white(vulnerabilities.displayValue) + "\n");
-
-                        let vulns = [];
-                        
-                        const vulnTable = new easyTable;
-                        
-                        vulnerabilities.extendedInfo.vulnerabilities.forEach(el => {
-                            let lib = `${el.name}@${el.version}`;
-                            let vulnCount = el.vulnCount;
-                            let url = el.pkgLink;
-                            let sev = el.highestSeverity;
-
-                            vulns.push({
-                                libraryVersion: lib,
-                                vulnCount,
-                                highestSeverity: sev,
-                                url
-                            });
-
-                            if(el.highestSeverity === "Medium") {
-                                lib = chalk.yellow.bold(lib);
-                                vulnCount = chalk.yellow.bold(vulnCount);
-                                url = chalk.yellow.bold.underline(el.pkgLink);
-                                sev = chalk.yellow.bold(sev);
-                            } else if(el.highestSeverity === "High") {
-                                lib = chalk.red.bold(lib);
-                                vulnCount = chalk.red.bold(vulnCount);
-                                url = chalk.red.bold.underline(url);
-                                sev = chalk.red.bold(sev);
-                            }
-
-                            vulnTable.cell("Library Version", lib);
-                            vulnTable.cell("Vulnerability Count", vulnCount);
-                            vulnTable.cell("Highest Severity", sev);
-                            vulnTable.cell("URL", url);
-                            vulnTable.newRow();
-                        });
-                        
-                        pdfGenData.vulns.vulns = vulns;
-                        pdfGenData.vulns.total = pdfGenData.vulns.vulns.length;
-                        console.log(vulnTable.toString());
-                    }
-                    
-                    pdf.generate("lighthouse", pdfGenData, args.f);
-                });
-            });
-
-        },
-        
-        /**
-         * Runs a observatory security test on a given url
-         * 
-         * @param {object} argv Arguments from yargs
-         * @param {string} url url to test
-         */
-        observatory(args, url) {
-
-            const pdfGenData = {
-                url,
-                score: "",
-                grade: "",
-                rules: []
-            }
-
-            const spinner = ora({
-                text: "Running through tests...",
-                spinner: "moon",
-                color: "green"
-            }); 
-            const unixTimeStamp = unix(new Date());
-
-            if(urlLib.isLocal(url)){
-                console.log(chalk.bgRed.white.bold("[ERROR] Mozilla Observatory does not support testing on localhost URLs"));
-                return;
-            }
-
-            spinner.start();
-
-            shellExec(`observatory ${url} --format=json &>report-${unixTimeStamp}-observatory.json`).then(() => {
-                fs.readFile(`report-${unixTimeStamp}-observatory.json`, "utf8", (err, data) => {
-                    if(err) {
-                        console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")));
-                    }
-
-                    if(data.includes("observatory [ERROR]")){
-                        spinner.stop().clear();
-                        
-                        const errMsg = data.replace("observatory [ERROR] ", "").replace("Error: ", "");
-                        console.log(chalk.bgRed.white.bold(`[ERROR] ${errMsg}`));
-                    } else {
-                        shellExec(`observatory ${url} --format=csv &>report-${unixTimeStamp}-observatory.txt`).then(() => {
-                            spinner.stop().clear();
-
-                            const resultsSpinner = ora({
-                                text: "Formatting results...",
-                                spinner: "earth",
-                                color: "green"
-                            });
-                            resultsSpinner.start();
-                            
-                            /** Start the reading of the json file of the results of the observatory test */
-                            fs.readFile(`report-${unixTimeStamp}-observatory.json`, "utf8", (err, data) => {
-                                if(err) {
-                                    console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
-                                }
-
-                               const lines = data.split("\n"),
-                                     filteredLines = lines.filter(line => !line.includes("observatory [WARN]")),
-                                     cleanData = filteredLines.join("\n"),
-                                     parsedData = JSON.parse(cleanData),
-                                     obsTable = new easyTable;
-
-                                resultsSpinner.stop().clear();
-                                console.log(`${chalk.cyan.bold("\nMozilla Observatory Security Report: ")} ${url}\n`);
-
-                                for(let prop in parsedData) {
-                                    const test = parsedData[prop];
-
-                                    obsTable.cell("Score", test.score_modifier);
-                                    obsTable.cell("Rule", chalk.red.bold(pdf.formatObsRule(test.name)))
-                                    obsTable.cell("Description", test.score_description);
-                                    obsTable.cell("Pass?", (test.pass ? chalk.green.bold("\u2714") : chalk.red.bold("\u2718")));
-                                    obsTable.newRow();
-
-                                    pdfGenData.rules.push({
-                                        score: test.score_modifier,
-                                        slug: test.name,
-                                        desc: test.score_description,
-                                        isPassed: test.pass,
-                                        class: (test.pass) ? "green" : "red"
-                                    });
-                                }
-
-                                console.log(chalk.cyan.bold("Overview"));
-                                console.log(obsTable.toString());
-
-                                fs.readFile(`report-${unixTimeStamp}-observatory.txt`, "utf8", (err, data) => {
-                                    if(err) {
-                                        console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
-                                    }
-
-                                    var lines = data.split("\n"),
-                                        filteredLines = lines.filter(line => (line.includes("Score: ") || line.includes("Grade: "))),
-                                        cleanData = filteredLines.map(line => {
-                                            if(line.includes("Score: ")){
-                                                return line.replace("Score: ", "");
-                                            } else {
-                                                return line.replace("Grade: ", "");
-                                            }
-                                        });
-
-                                    pdfGenData.score = cleanData[0];
-                                    pdfGenData.grade = cleanData[1];
-
-                                    const observatoryURL = `https://observatory.mozilla.org/analyze.html?host=${url}`;
-
-                                    console.log(`${chalk.cyan.bold("Score: ")} ${cleanData[0]}\n${chalk.cyan.bold("Grade: ")} ${cleanData[1]}\n`);
-                                    console.log(`For more details on the contents of each section of this report please check out the full report at ${chalk.cyan.bold.underline(observatoryURL)}.`);
-                                    console.log(`Additionally please consult this page for answered to commonly asked questions about Mozilla's Observatory Security Report ${chalk.cyan.bold.underline("https://observatory.mozilla.org/faq.html")}.\n`);
-                                    
-                                    pdf.generate("observatory", pdfGenData, args.f);
-
-                                    /**
-                                     * Remove the generated files since we don't need them anymore
-                                     */
-                                    shellExec(`rm -rf report-${unixTimeStamp}-observatory.json report-${unixTimeStamp}-observatory.txt`);
-                                });
-                            });
-                        }); 
-                    }
-                });
-            });
-        },
-       
-        /**
-         * Runs both an observatory lighthouse test and an observatory security test on a given url
-         * 
-         * @param {object} argv Arguments from yargs
-         * @param {string} url url to test
-         */
-        all(args, url){
-            const spinner = ora({
-                text: "Running lighthouse tests...",
-                spinner: "weather",
-                color: "green"
-            }); 
-            let isLocalURL = urlLib.isLocal(url);
-
-            /**
-             * What scores for each metric of each test will result in a pass, fail or average result
-             * 
-             * @var {object} ratings
-             */
-            const ratings = {
-                pass: 80,
-                average: 70,
-                fail: 69
-            }
-
-            const unixTimeStamp = unix(new Date());
-
-            let lighthouseCommand = `lighthouse ${url} --chrome-flags="--headless" --quiet --output=html --output-path=./report-${unixTimeStamp}.html`;
-
-            /** Show the log from the lighthouse command if --verbose is passed in */
-            if(args.verbose) {
-                lighthouseCommand = `lighthouse ${url} --chrome-flags="--headless" --output=html --output-path=./report-${unixTimeStamp}.html`;
-            }
-            
-            /** If the url passed in a localhost URL let the user know that Mozilla's observatory doesn't support localhost URLs */
-            if(isLocalURL){
-                console.log(chalk.bgYellow.black.bold("[WARN] Mozilla Observatory doesn't support localhost URLs. Only running Google Lighthouse tests."));
-            }
-
-            /** Start the spinner if we don't want to use verbose output for lighthouse */
-            if(!args.verbose) {
-                spinner.start();
-            }
-
-            shellExec(lighthouseCommand).then(() => {
-                let obsSpinner;
-
-                /** Skip the observatory tests and go straight to formatting the lighthouse results */
-                if(isLocalURL){
-                   spinner.stop().clear();
-                   
-                    const resultsSpinner = ora({
-                        text: "Formatting results...",
-                        spinner: "earth",
-                        color: "green"
-                    });
-
-                    resultsSpinner.start();
-
-                    /** Begin formatting lighthouse results */
-                    fs.readFile(`report-${unixTimeStamp}.html`, "utf8", (err, contents) => {
-                        if(err) {
-                            console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
-                        }
-                    
-                        const dom = new JSDOM(contents);
-                        
-                        /**
-                         * A string of the JSON data from the bottom of the <body> in the lighthouse report html
-                         * 
-                         * @var {string} theJSON
-                         */
-                        let theJSON = dom.window.document.querySelectorAll("script")[1].innerHTML.replace("window.__LIGHTHOUSE_JSON__ = ", "")
-                        
-                        /**
-                         * Remove the ";" at the end of the JSON string so we can parse it into an object
-                         */
-                        theJSON = theJSON.substring(0, theJSON.length - 1);
-                    
-                        /**
-                         * The parsed version of the JSON string from above
-                         * 
-                         * @var {object} parsedJSON
-                         */
-                        const parsedJSON = JSON.parse(theJSON);
-                    
-                        /**
-                         * If --verbose was passed in add some padding between the last line of the lighthouse
-                         * logs and the first line of the test results
-                         */
-                        if(args.verbose) {
-                            console.log("");
-                        }
-
-                        /**
-                         * Logging the results of the lighthouse test
-                         */
-                        let notes = `${chalk.cyan.bold("Notes:")}\n`;
-                        const t = new easyTable;
-                        
-                        resultsSpinner.stop().clear();
-                        console.log(`${chalk.cyan.bold("\nGoogle Lighthouse Report")}: ${parsedJSON.url}\nAll scores are out of 100. For more details on the contents of each section of this report please check out the full report at ${chalk.cyan.bold.underline(path.resolve(`./report-${unixTimeStamp}.html`))}.\n`);
-                    
-                        parsedJSON.reportCategories.forEach(el => {
-                    
-                            /**
-                             * The scores for each category include decimal values, we don't really need 
-                             * to be that precise, so we're rounding up to the closes whole number
-                             */
-                            let score = Math.ceil(el.score);
-                    
-                            if(el.score >= ratings.pass) {
-                    
-                                /** Highlight passing scores green and bold */
-                                score = chalk.green.bold(score);
-                    
-                            } else if(el.score > ratings.fail && el.score <= ratings.pass) {
-                    
-                                /** Highlight average scores yellow and bold */
-                                score = chalk.yellow.bold(score);
-                                notes = `${notes}* Your score for the ${chalk.bgYellow.black.bold(`"${el.name}" metric needs improvement`)}. Please consult the ${chalk.cyan.bold.underline(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on what to improve.\n`;
-                    
-                            } else if(el.score <= ratings.fail) {
-                                
-                                /** Highlight failing scores red and bold */
-                                score = chalk.red.bold(score);
-                                notes = `${notes}* Your score for the ${chalk.bgRed.white.bold(`"${el.name}" metric is poor`)}. Please consult the ${chalk.cyan.bold.underline(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on how to improve it.\n`;
-                            }
-                    
-                            t.cell("Score", score);
-                            t.cell("Metric", el.name);
-                            t.newRow();
-                        });
-
-                        console.log(t.toString());
-                        console.log(notes);
-
-                        /**
-                         * Get the result of the "no-vulnerable-libraries" audit under the "Best Practices" section
-                         */
-                        let vulnerabilities = parsedJSON.reportCategories[3].audits[9].result;
-                    
-                        /** If there are in fact vulnerable JS libraries in the passed in site let the user now */
-                        if(!vulnerabilities.score) {
-                            console.log(`${chalk.cyan.bold("Included front-end JavaScript libraries with known security vulnerabilities:")}`);
-                            console.log(chalk.bgRed.bold.white(vulnerabilities.displayValue) + "\n");
-                            
-                            const vulnTable = new easyTable;
-                            
-                            vulnerabilities.extendedInfo.vulnerabilities.forEach(el => {
-                                let lib = `${el.name}@${el.version}`;
-                                let vulnCount = el.vulnCount;
-                                let url = el.pkgLink;
-                                let sev = el.highestSeverity;
-
-                                if(el.highestSeverity === "Medium") {
-                                    lib = chalk.yellow.bold(lib);
-                                    vulnCount = chalk.yellow.bold(vulnCount);
-                                    url = chalk.yellow.bold.underline(el.pkgLink);
-                                    sev = chalk.yellow.bold(sev);
-                                } else if(el.highestSeverity === "High") {
-                                    lib = chalk.red.bold(lib);
-                                    vulnCount = chalk.red.bold(vulnCount);
-                                    url = chalk.red.bold.underline(url);
-                                    sev = chalk.red.bold(sev);
-                                }
-
-                                vulnTable.cell("Library Version", lib);
-                                vulnTable.cell("Vulnerability Count", vulnCount);
-                                vulnTable.cell("Highest Severity", sev);
-                                vulnTable.cell("URL", url);
-                                vulnTable.newRow();
-                            });
-                            
-                            console.log(vulnTable.toString());
-                        }
-
-                    });
-                    
-                } else {
-                    /** 
-                     * If the URL passed in was not a localhost URL then proceed to run an
-                     * observatory test before formatting the results
-                     */
-
-                    /**
-                     * Change the spinner to reflect that we are now going to 
-                     * get the observatory data
-                     */
-                    if(!args.verbose) {
-                        spinner.stop().clear();
-
-                        obsSpinner = ora({
-                            text: "Running observatory tests...",
-                            spinner: "moon",
-                            color: "green"
-                        });
-        
-                        obsSpinner.start();
-                    }
-
-                    /** Format URL to pass to observatory */
-                    const domainOnlyURL = urlLib.domainOnlyURL(url);
-
-                    /** Run the the observatory tests */
-                    shellExec(`observatory ${domainOnlyURL} --format=json &>report-${unixTimeStamp}-observatory.json`).then(() => {
-                        fs.readFile(`report-${unixTimeStamp}-observatory.json`, "utf8", (err, data) => {
-                            if(err) {
-                                console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
-                            }
-
-                            if(data.includes("observatory [ERROR]")){
-                                obsSpinner.stop().clear();
-                            
-                                const errMsg = data.replace("observatory [ERROR] ", "").replace("Error: ", "");
-                                console.log(chalk.bgRed.white.bold(`[ERROR] ${errMsg}`));
-                            } else {
-                                shellExec(`observatory ${domainOnlyURL} --format=csv &>report-${unixTimeStamp}-observatory.txt`).then(() => {
-                                    obsSpinner.stop().clear();
-
-                                    const resultsSpinner = ora({
-                                        text: "Formatting results...",
-                                        spinner: "earth",
-                                        color: "green"
-                                    });
-
-                                    resultsSpinner.start();
-
-                                    /**
-                                     * The result of the test is an html file that we can present the user with so they can read up on they
-                                     * can improve their site. But we need to know what scores they got in each category without having to
-                                     * scrape the html of the report or re-run the report with json output this time. Turns out the json results 
-                                     * are saved in a script tag at the bottom of the <body> of the html of the report so we're just invoking an 
-                                     * instance of JSDOM to parse that JSON so we can pull out the info we need.
-                                     */
-                                    fs.readFile(`report-${unixTimeStamp}.html`, "utf8", (err, contents) => {
-
-                                        if(err) {
-                                            console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
-                                        }
-                                    
-                                        const dom = new JSDOM(contents);
-                                        
-                                        /**
-                                         * A string of the JSON data from the bottom of the <body> in the lighthouse report html
-                                         * 
-                                         * @var {string} theJSON
-                                         */
-                                        let theJSON = dom.window.document.querySelectorAll("script")[1].innerHTML.replace("window.__LIGHTHOUSE_JSON__ = ", "")
-                                        
-                                        /**
-                                         * Remove the ";" at the end of the JSON string so we can parse it into an object
-                                         */
-                                        theJSON = theJSON.substring(0, theJSON.length - 1);
-                                    
-                                        /**
-                                         * The parsed version of the JSON string from above
-                                         * 
-                                         * @var {object} parsedJSON
-                                         */
-                                        const parsedJSON = JSON.parse(theJSON);
-                                    
-                                        /**
-                                         * If --verbose was passed in add some padding between the last line of the lighthouse
-                                         * logs and the first line of the test results
-                                         */
-                                        if(args.verbose) {
-                                            console.log("");
-                                        }
-                                    
-                                        /**
-                                         * Logging the results of the lighthouse test
-                                         */
-                                        let notes = `${chalk.cyan.bold("Notes:")}\n`;
-                                        const t = new easyTable;
-                                        
-                                        resultsSpinner.stop().clear();
-                                        console.log(`${chalk.cyan.bold("\nGoogle Lighthouse Report")}: ${parsedJSON.url}\nAll scores are out of 100. For more details on the contents of each section of this report please check out the full report at ${chalk.cyan.bold.underline(path.resolve(`./report-${unixTimeStamp}.html`))}.\n`);
-                                    
-                                        parsedJSON.reportCategories.forEach(el => {
-                                    
-                                            /**
-                                             * The scores for each category include decimal values, we don't really need 
-                                             * to be that precise, so we're rounding up to the closes whole number
-                                             */
-                                            let score = Math.ceil(el.score);
-                                    
-                                            if(el.score >= ratings.pass) {
-                                    
-                                                /** Highlight passing scores green and bold */
-                                                score = chalk.green.bold(score);
-                                    
-                                            } else if(el.score > ratings.fail && el.score <= ratings.pass) {
-                                    
-                                                /** Highlight average scores yellow and bold */
-                                                score = chalk.yellow.bold(score);
-                                                notes = `${notes}* Your score for the ${chalk.bgYellow.black.bold(`"${el.name}" metric needs improvement`)}. Please consult the ${chalk.cyan.bold.underline(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on what to improve.\n`;
-                                    
-                                            } else if(el.score <= ratings.fail) {
-                                                
-                                                /** Highlight failing scores red and bold */
-                                                score = chalk.red.bold(score);
-                                                notes = `${notes}* Your score for the ${chalk.bgRed.white.bold(`"${el.name}" metric is poor`)}. Please consult the ${chalk.cyan.bold.underline(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on how to improve it.\n`;
-                                            }
-                                    
-                                            t.cell("Score", score);
-                                            t.cell("Metric", el.name);
-                                            t.newRow();
-                                        });
-
-                                        console.log(t.toString());
-                                        console.log(notes);
-                                    
-                                        /**
-                                         * Get the result of the "no-vulnerable-libraries" audit under the "Best Practices" section
-                                         */
-                                        let vulnerabilities = parsedJSON.reportCategories[3].audits[9].result;
-                                    
-                                        /** If there are in fact vulnerable JS libraries in the passed in site let the user now */
-                                        if(!vulnerabilities.score) {
-                                            console.log(`${chalk.cyan.bold("Included front-end JavaScript libraries with known security vulnerabilities:")}`);
-                                            console.log(chalk.bgRed.bold.white(vulnerabilities.displayValue) + "\n");
-                                            
-                                            const vulnTable = new easyTable;
-                                            
-                                            vulnerabilities.extendedInfo.vulnerabilities.forEach(el => {
-                                                let lib = `${el.name}@${el.version}`;
-                                                let vulnCount = el.vulnCount;
-                                                let url = el.pkgLink;
-                                                let sev = el.highestSeverity;
-
-                                                if(el.highestSeverity === "Medium") {
-                                                    lib = chalk.yellow.bold(lib);
-                                                    vulnCount = chalk.yellow.bold(vulnCount);
-                                                    url = chalk.yellow.bold.underline(el.pkgLink);
-                                                    sev = chalk.yellow.bold(sev);
-                                                } else if(el.highestSeverity === "High") {
-                                                    lib = chalk.red.bold(lib);
-                                                    vulnCount = chalk.red.bold(vulnCount);
-                                                    url = chalk.red.bold.underline(url);
-                                                    sev = chalk.red.bold(sev);
-                                                }
-
-                                                vulnTable.cell("Library Version", lib);
-                                                vulnTable.cell("Vulnerability Count", vulnCount);
-                                                vulnTable.cell("Highest Severity", sev);
-                                                vulnTable.cell("URL", url);
-                                                vulnTable.newRow();
-                                            });
-                                            
-                                            console.log(vulnTable.toString());
-                                        }
-                                        
-                                        /** Start the reading of the json file of the results of the observatory test */
-                                        fs.readFile(`report-${unixTimeStamp}-observatory.json`, "utf8", (err, data) => {
-                                            if(err) {
-                                                console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
-                                            }
-
-                                        const lines = data.split("\n"),
-                                                filteredLines = lines.filter(line => !line.includes("observatory [WARN]")),
-                                                cleanData = filteredLines.join("\n"),
-                                                parsedData = JSON.parse(cleanData),
-                                                obsTable = new easyTable;
-
-                                            console.log(`${chalk.cyan.bold("\nMozilla Observatory Security Report: ")} ${domainOnlyURL}\n`);
-
-                                            for(let prop in parsedData) {
-                                                const test = parsedData[prop];
-
-                                                obsTable.cell("Score", test.score_modifier);
-                                                obsTable.cell("Rule", chalk.red.bold(pdf.formatObsRule(test.name)));
-                                                obsTable.cell("Description", test.score_description);
-                                                obsTable.cell("Pass?", (test.pass ? chalk.green.bold("\u2714") : chalk.red.bold("\u2718")));
-                                                obsTable.newRow();
-                                            }
-                                            
-                                            console.log(chalk.cyan.bold("Overview"));
-                                            console.log(obsTable.toString());
-
-                                            fs.readFile(`report-${unixTimeStamp}-observatory.txt`, "utf8", (err, data) => {
-                                                if(err) {
-                                                    console.log(chalk.bgRed.white.bold(err.message.replace("Error: ", "")))
-                                                }
-
-                                                var lines = data.split("\n"),
-                                                    filteredLines = lines.filter(line => (line.includes("Score: ") || line.includes("Grade: "))),
-                                                    cleanData = filteredLines.map(line => {
-                                                        if(line.includes("Score: ")){
-                                                            return line.replace("Score: ", "");
-                                                        } else {
-                                                            return line.replace("Grade: ", "");
-                                                        }
-                                                    });
-
-                                                const observatoryURL = `https://observatory.mozilla.org/analyze.html?host=${domainOnlyURL}`;
-
-                                                console.log(`${chalk.cyan.bold("Score: ")} ${cleanData[0]}\n${chalk.cyan.bold("Grade: ")} ${cleanData[1]}\n`);
-                                                console.log(`For more details on the contents of each section of this report please check out the full report at ${chalk.cyan.bold.underline(observatoryURL)}.`);
-                                                console.log(`Additionally please consult this page for answered to commonly asked questions about Mozilla's Observatory Security Report ${chalk.cyan.bold.underline("https://observatory.mozilla.org/faq.html")}.\n`);
-                                                
-                                                /**
-                                                 * Remove the generated files since we don't need them anymore
-                                                 */
-                                                shellExec(`rm -rf report-${unixTimeStamp}-observatory.json report-${unixTimeStamp}-observatory.txt`);
-                                            });
-                                        });
-                                    });
-                                });
-                            }
-                        });
-                    });
-                }
-            });
-        }
-    }
+    lighthouse,
+    observatory,
+    pagespeed,
+    all
 }
