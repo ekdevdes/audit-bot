@@ -187,7 +187,7 @@ async function observatory(opts, url) {
 
     // if the user passed in a localhost URL we'll simply tell them that observatory doesn't support localhost URLs and then stop execution of the function
     if(urlFormatter.isLocal(url)) {
-        logWarning("Localhost URL detected, Mozilla Observatory does not support localhost URLs, aborting test...")
+        logWarning("Localhost URL detected, Mozilla Observatory does not support localhost URLs, aborting test...");
 
         return;
     }
