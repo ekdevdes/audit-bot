@@ -28,6 +28,8 @@ const unixTimeStamp = unix(new Date()); // a unique unix timestamp
 // url: url to run test on
 async function lighthouse(opts, url) {
 
+    pdf.addData("url", url);
+
     let cmd = `lighthouse ${url} --chrome-flags="--headless" --quiet --output=html --output-path=./report-${unixTimeStamp}.html`;
     const spinner = ora({
         text: "Running lighthouse tests...",
@@ -97,16 +99,25 @@ async function lighthouse(opts, url) {
     // loop over each category of the lighthouse test and pull out the score and write some notes for each category
     testResult.reportCategories.map(category => {
         let score = Math.ceil(category.score); // round the category score ot the nearest whole number
+        let pdfDataObj = {score, class: ""};
 
         if(category.score >= ratings.pass) {
             score = chalk.green.bold(score);
+
+            pdfDataObj.class = "good";
         } else if(category.score > ratings.fail && category.score <= ratings.pass) {
             score = chalk.yellow.bold(score);
             notes.push(`* Your score for the ${chalk.bgYellow.black.bold(`"${category.name}" metric needs improvement`)}. Please consult the ${formatFileName(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on what to improve.`);
+
+            pdfDataObj.class = "ok";
         } else if(category.score <= ratings.fail) {
             score = chalk.red.bold(score);
             notes.push(`* Your score for the ${chalk.bgRed.white.bold(`"${category.name}" metric is poor`)}. Please consult the ${formatFileName(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on how to improve it`);
+
+            pdfDataObj.class = "poor";
         }
+
+        pdf.addData(category, pdfDataObj);
 
         table.cell("Score", score);
         table.cell("Metric", category.name);
@@ -208,7 +219,7 @@ async function observatory(opts, url) {
     if(fileErr) {
         spinner.stop().clear();
 
-        logError(err.message.replace("Error: ", ""));
+        logError(err.message);
     }
 
     contents = contents.toString("utf8");
@@ -217,7 +228,7 @@ async function observatory(opts, url) {
     if(contents.includes("observatory [ERROR]")) {
         spinner.stop().clear();
 
-        logError(contents.replace("observatory [ERROR] ", "").replace("Error: ", ""));
+        logError(contents.replace("observatory [ERROR] ", ""));
     }
 
     // unfortunately the JSON output we got earlier doesn't include the test's overall score or grade...but this txt file will...
@@ -243,7 +254,7 @@ async function observatory(opts, url) {
     if(jsonErr) {
         resultsSpinner.stop().clear();
 
-        logError(err.message.replace("Error: ", ""));
+        logError(err.message);
     }
 
     jsonContents = jsonContents.toString("utf8");
@@ -276,7 +287,7 @@ async function observatory(opts, url) {
     let [txtReadErr, txtReadContents] = await on(fs.readFileAsync(`report-${unixTimeStamp}-observatory.txt`));
 
     if(txtReadErr) {
-        logError(err.message.replace("Error: ", ""));
+        logError(err.message);
     }
 
     txtReadContents = txtReadContents.toString("utf8");

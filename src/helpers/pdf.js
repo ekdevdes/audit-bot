@@ -115,30 +115,28 @@ function regexForSection(sectionName) {
 }
 
 // Public functions
-// DELETE THIS LINE: uses expand-object – expand("scores.performance.score|scores.performance.class") -> { scores: { performance: { score: '', class: '' } } }
-// DELETE THIS LINE: envisioned usage of this function: pdf.addData("url", "http://ethankr.me") or pdf.addData("pwa", {score: 98, class: "good"})
 // adds a piece of data to an internal object that will ultimately be used to fill in template data
 function addData(key, data) {
-    // DELETE THESE LINES: how to use expand object
-    let obj1 = expandObject("scores.pwa.class|scores.pwa.score");
-    let obj2 = expandObject("scores.performance.class|scores.performance.score");
-    // END DELETE THESE LINES
+   key = key.toString().toLowerCase();
+   
+   const lighthouseAudits = ["pwa", "performance", "accessibility", "bestPractices", "seo"];
 
-    // DELETE THESE LINES: how to merge objects.scores of multiple objects together
-    let obj3 = Object.assign(obj1.scores, obj2.scores);
-    // END DELETE THESE LINES
+   if(lighthouseAudits.includes(key)) {
+       let expandedObject = expandObject(`scores.${key}.class|scores.${key}.score`);
 
-    // DELETE THESE LINES: how to merge the existing value of templateData.scores with the new value so I can set templateData.scores to this new value
-    // DELETE THESE LINES: envisioned usage of this addData function pdf.addData("pwa", {score: 98, class: "good"})
-    let expandedObject = expandObject(`scores.${key}.class|scores.${key}.score`);
+       expandedObject.scores[key].class = data.class;
+       expandedObject.scores[key].score = data.score;
+   
+       let newScoresValue = Object.assign(templateData.scores, expandedObject.scores);
 
-    expandedObject.scores[key].class = data.class;
-    expandedObject.scores[key].score = data.score;
+       templateData.scores = newScoresValue;
 
-    let obj4 = Object.assign(templateData.scores, expandedObject.scores);
+       console.log(templateData);
+   } else {
+       templateData[key] = data;
 
-    console.log(obj4);
-    // END DELETE THESE LINES
+       console.log(templateData);
+   }
 }
 
 // generates a PDF with data from an internal object (built by addData() method) and uses that info to fill in an HTML template then converts that HTML template to a PDF
@@ -148,5 +146,6 @@ async function generate(testName, pdfPath = "") {
 
 module.exports = {
     addData,
-    generate
+    generate,
+    templateData
 };

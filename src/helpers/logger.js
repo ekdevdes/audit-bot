@@ -6,7 +6,7 @@ function logWarning(msg) {
 }
 
 function logError(msg) {
-    console.log(chalk.bgRed.white.bold(`[ERROR] ${msg}`));
+    console.log(chalk.bgRed.white.bold(`[ERROR] ${msg.replace("Error: ", "")}`));
 }
 
 function logMultilineMsg(msgs) {
