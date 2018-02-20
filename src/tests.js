@@ -26,7 +26,7 @@ const unixTimeStamp = unix(new Date()); // a unique unix timestamp
 
 // opts: the command line options passed in
 // url: url to run test on
-async function lighthouse(opts, url) {
+async function lighthouse(opts, url, isCalledFromAllMethod = false) {
 
     pdf.addData("url", url);
 
@@ -73,6 +73,7 @@ async function lighthouse(opts, url) {
     }
 
     resultsSpinner.stop().clear();
+    pdf.addData("pathToLighthouseReport", path.resolve(`report-${unixTimeStamp}.html`));
     
     // convert the buffer obtained as a result to a string
     contents = contents.toString("utf8");
@@ -95,11 +96,13 @@ async function lighthouse(opts, url) {
 
     const table = new easyTable;
     let notes = [`${chalk.cyan.bold("Notes:")}\n`];
+    let metrics = [];
 
     // loop over each category of the lighthouse test and pull out the score and write some notes for each category
     testResult.reportCategories.map(category => {
         let score = Math.ceil(category.score); // round the category score ot the nearest whole number
         let pdfDataObj = {score, class: ""};
+        let metricDataObj = {name: category.name, grade: "", class: ""};
 
         if(category.score >= ratings.pass) {
             score = chalk.green.bold(score);
@@ -110,19 +113,29 @@ async function lighthouse(opts, url) {
             notes.push(`* Your score for the ${chalk.bgYellow.black.bold(`"${category.name}" metric needs improvement`)}. Please consult the ${formatFileName(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on what to improve.`);
 
             pdfDataObj.class = "ok";
+            metricDataObj.class = "ok";
+            metricDataObj.grade = "needs improvement";
         } else if(category.score <= ratings.fail) {
             score = chalk.red.bold(score);
             notes.push(`* Your score for the ${chalk.bgRed.white.bold(`"${category.name}" metric is poor`)}. Please consult the ${formatFileName(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on how to improve it`);
 
             pdfDataObj.class = "poor";
+            metricDataObj.class = "poor";
+            metricDataObj.grade = "is poor";
         }
 
-        pdf.addData(category, pdfDataObj);
+        if(category.score < ratings.pass) {
+            metrics.push(metricDataObj);
+        }
+
+        pdf.addData(category.id.replace(/-/g, ""), pdfDataObj);
 
         table.cell("Score", score);
         table.cell("Metric", category.name);
         table.newRow();
     });
+
+    pdf.addData("metrics", metrics);
 
     console.log(table.toString());
     logMultilineMsg(notes);
@@ -133,7 +146,6 @@ async function lighthouse(opts, url) {
     // if we have any vulnerable libraries used in the passed in url...the test name is "no vulnerable libraries"
     if(!vulnerabilities.score) {
 
-        let vulns = [];
         const vulnTable = new easyTable;
 
         // add a line of padding between the notes and the vulnerabilities
@@ -147,18 +159,20 @@ async function lighthouse(opts, url) {
         // add a line of padding between the number of vulnerabilities header and the vulnerabilites table
         logNewLine();
 
+        let vulns = [];
+
         vulnerabilities.extendedInfo.vulnerabilities.map(vuln => {
             let lib = `${vuln.name}@${vuln.version}`;
             let vulnCount = vuln.vulnCount;
             let url = vuln.pkgLink;
             let sev = vuln.highestSeverity;
-
-            vulns.push({
+            
+            let vulnDataObj = {
                 libraryVersion: lib,
                 vulnCount,
                 highestSeverity: sev,
                 url
-            });
+            };
 
             if(vuln.highestSeverity === "Medium") {
                 lib = chalk.yellow.bold(lib);
@@ -172,6 +186,8 @@ async function lighthouse(opts, url) {
                 sev = chalk.red.bold(sev);
             }
 
+            vulns.push(vulnDataObj);
+
             vulnTable.cell("Library Version", lib);
             vulnTable.cell("Vulnerability Count", vulnCount);
             vulnTable.cell("Highest Severity", sev);
@@ -179,16 +195,33 @@ async function lighthouse(opts, url) {
             vulnTable.newRow();
         });
 
+        pdf.addData("vulns", {
+            total: vulns.length,
+            vulns
+        });
         console.log(vulnTable.toString());
     }
 
     // Add a line of padding so that when the all method calls this function there will be space between this output and the next test output
     logNewLine();
+
+    if(isCalledFromAllMethod) {
+        return pdf.getTemplateData();
+    } else {
+        pdf.generate("lighthouse", opts.file).then(data => {
+            console.log(data);
+        }).catch(err => {
+            console.log(err);
+        });
+    }
 }
 
 // opts: the command line options passed in
 // url: url to run test on
-async function observatory(opts, url) {
+async function observatory(opts, url, isCalledFromAllMethod = false) {
+
+    pdf.addData("url", url);
+    pdf.addData("host", urlFormatter.domainOnlyURL(url));
 
     // lets show a little emoji spinner while we run the test
     const spinner = ora({
@@ -219,7 +252,7 @@ async function observatory(opts, url) {
     if(fileErr) {
         spinner.stop().clear();
 
-        logError(err.message);
+        logError(fileErr.message);
     }
 
     contents = contents.toString("utf8");
@@ -270,6 +303,8 @@ async function observatory(opts, url) {
 
     // add a line of padding between the test header and the results table
     logNewLine();
+
+    let rules = [];
     
     // loop through each rule that the passed in URL didn't comply too
     for(let prop in parsedData) {
@@ -280,8 +315,17 @@ async function observatory(opts, url) {
         obsTable.cell("Description", test.score_description);
         obsTable.cell("Pass?", (test.pass ? chalk.green.bold("\u2714") : chalk.red.bold("\u2718")));
         obsTable.newRow();
+
+        rules.push({
+            score: test.score_modifier,
+            slug: test.name,
+            desc: test.score_description,
+            isPassed: test.pass,
+            class: (test.pass ? "green" : "red")
+        });
     }
 
+    pdf.addData("rules", rules);
     console.log(obsTable.toString());
 
     let [txtReadErr, txtReadContents] = await on(fs.readFileAsync(`report-${unixTimeStamp}-observatory.txt`));
@@ -302,6 +346,9 @@ async function observatory(opts, url) {
             }
         });
 
+    pdf.addData("score", txtCleanData[0]);
+    pdf.addData("grade", txtCleanData[1]);
+
     logMultilineMsg([
         `${chalk.cyan.bold("Score: ")} ${txtCleanData[0]}`,
         `${chalk.cyan.bold("Grade: ")} ${txtCleanData[1]}`
@@ -318,6 +365,16 @@ async function observatory(opts, url) {
     
     // delete the files we pulled all this data in so as not to bloat the users system with unecessary files
     exec(`rm -rf report-${unixTimeStamp}-observatory.json report-${unixTimeStamp}-observatory.txt`);
+
+    if(isCalledFromAllMethod) {
+        return pdf.getTemplateData();
+    } else {
+        pdf.generate("observatory", opts.file).then(data => {
+            console.log(data);
+        }).catch(err => {
+            console.log(err);
+        });
+    }
 }
 
 // opts: the command line options passed in
@@ -330,13 +387,48 @@ async function pagespeed(opts, url) {
 // url: url to run test on
 async function all(opts, url) {
 
-    let [lerr, lresp] = await on(lighthouse(opts, url));
-    let [oerr, oresp] = await on(observatory(opts, url));
+    let [lerr, lresp] = await on(lighthouse(opts, url, true));
+    let [oerr, oresp] = await on(observatory(opts, url, true));
 
     if(lerr) {
-        logError(lerr.message);
+        logError(lerr);
     } else if(oerr) {
-        logError(oerr.message);
+        logError(oerr);
+    }
+
+    let combinedPDFData = {};
+
+    /* if we have data from the lighthouse method that will be used to generate the PDF of the results
+    and only data from the lighhouse method then just call the lighthouse PDF generation function
+    
+    If we only have info on the PDF generation data from observatory and not from lighthouse then 
+    just generate an observatory results PDF
+    
+    If we have data that will be used to generate a PDF of the results from both tests then 
+    combine the data using Object.assign and pass that data to pdf.generate to generate a combined PDF
+    of both test results */
+    if(lresp && !oresp) {
+        combinedPDFData = lresp;
+        pdf.generate("lighthouse", opts.file).then(data => {
+            console.log(data);
+        }).catch(err => {
+            console.log(err);
+        });
+    } else if(oresp && !lresp) {
+            combinedPDFData = oresp;
+            pdf.generate("lighthouse", opts.file).then(data => {
+                console.log(data);
+            }).catch(err => {
+                console.log(err);
+            });
+    } else if(lresp && oresp) {
+            combinedPDFData = Object.assign(lresp, oresp);
+            
+            pdf.generate("all", combinedPDFData).then(data => {
+                console.log(data);
+            }).catch(err => {
+                console.log(err);
+            });
     }
 }
 

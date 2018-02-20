@@ -7,6 +7,7 @@ const ora = require("ora"); // colorful cli spinners
 const expandObject = require("expand-object"); // expand a.b.c to {a: b: {c: ""}}
 const bluebird = require("bluebird"); // library for "promisifying" all functions of a module
 const fs = bluebird.promisifyAll(require("fs")); // Promisify thge "fs" module (http://bit.ly/2H77JXE)
+const on = require("await-handler") // easily destructure a async/await err and response
 
 // Local Libs
 const urlFormatter = require("./url"); // run simple tests on urls (e.g whether its local or not, get only the domain)
@@ -82,12 +83,7 @@ const fieldNames = {
 }
 
 const templateData = {
-    scores: {
-        pwa: {
-            class: "good",
-            score: 98
-        }
-    }
+    scores: {}
 };
 
 function trimCurlyBraces(str) {
@@ -119,7 +115,7 @@ function regexForSection(sectionName) {
 function addData(key, data) {
    key = key.toString().toLowerCase();
    
-   const lighthouseAudits = ["pwa", "performance", "accessibility", "bestPractices", "seo"];
+   const lighthouseAudits = ["pwa", "performance", "accessibility", "bestpractices", "seo"];
 
    if(lighthouseAudits.includes(key)) {
        let expandedObject = expandObject(`scores.${key}.class|scores.${key}.score`);
@@ -130,22 +126,53 @@ function addData(key, data) {
        let newScoresValue = Object.assign(templateData.scores, expandedObject.scores);
 
        templateData.scores = newScoresValue;
-
-       console.log(templateData);
    } else {
        templateData[key] = data;
-
-       console.log(templateData);
    }
 }
 
-// generates a PDF with data from an internal object (built by addData() method) and uses that info to fill in an HTML template then converts that HTML template to a PDF
-async function generate(testName, pdfPath = "") {
+function getTemplateData() {
+    return templateData;
+}
 
+// generates a PDF with data from an internal object (built by addData() method) and uses that info to fill in an HTML template then converts that HTML template to a PDF
+async function generate(testName, pdfPath) {
+
+    // only generate a PDF if a path was actually passed in
+    if(pdfPath && pdfPath !== "") {
+        const resolvedPath = path.resolve(pdfPath);
+
+        const spinner = ora({
+            text: "Generating PDF...",
+            color: "blue"
+        }); 
+
+        spinner.start();
+
+        // get the data on the various security rules not being followed from the generated JSON file
+        let [lhFileErr, contents] = await on(fs.readFileAsync(`report-${unixTimeStamp}-observatory.json`));
+
+        if(lhFileErr) {
+            spinner.stop().clear();
+
+            logError(lhFileErr.message);
+        }
+
+        contents = contents.toString("utf8");
+
+        spinner.stop().clear();
+        
+        /* remove this later when done developing this method, then remove the console.log
+        of this value in methods that use pdf.generate */
+        return contents;
+    }
+    
+    return;
 }
 
 module.exports = {
     addData,
     generate,
+    getTemplateData,
     templateData
 };
