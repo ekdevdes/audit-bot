@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Google Lighthouse Test Results</title>
+    <style>
+        html, body {
+            font-family: sans-serif;
+        }
+
+        table {
+            text-align: left;
+        }
+
+        table th {
+            padding: 10px;
+        }
+
+        table th,
+        table td {
+            padding-right: 20px;
+        }
+
+        table td {
+            padding-left: 10px;
+        }
+
+        table tr td:first-child{
+            padding-left: 10px;
+        }
+
+        .poor{
+            color: red;
+        }
+
+        .ok{
+            color: orange;
+        }
+
+        .good{
+            color: green;
+        }
+
+        .good, .ok, .poor{
+            font-weight: bold;
+        }
+
+        h1 {
+            font-size: 25px;
+        }
+
+        header, .notes, .vulns h3 {
+            padding-left: 10px;
+        }
+
+        .notes {
+            margin-top: 20px;
+        }
+
+        .bgRed {
+            background: red;
+            color: white;
+            padding: 5px;
+            position: relative;
+            top: 5px;
+        }
+
+        .bgRed--thin {
+            background: red;
+            color: white;
+        }
+
+        .bgYellow {
+            background: yellow;
+            color: black;
+            padding: 5px;
+            position: relative;
+            top: 5px;
+        }
+
+        .bgYellow--thin {
+            background: yellow;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Google Lighthouse Report: <a href="http://ethankr.me">http://ethankr.me</a></h1>
+        <p>All scores are out of 100. For more details on the contents of each section of this report please check out the full report at <a href="file:///Users/ekramer/Desktop/audit-cli/report-1520373702.html"><strong>/Users/ekramer/Desktop/audit-cli/report-1520373702.html</strong></a>.</p>
+    </header>
+    <table>
+        <thead>
+          <tr>
+            <th>Score</th>
+            <th>Metric</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="poor">1</td>
+            <td>Progressive Web App</td>
+          </tr>
+          <tr>
+            <td class="poor">1</td>
+            <td>Performance</td>
+          </tr>
+          <tr>
+            <td class="poor">1</td>
+            <td>Accessibility</td>
+          </tr>
+          <tr>
+            <td class="poor">1</td>
+            <td>Best Practices</td>
+          </tr>
+          <tr>
+            <td class="poor">1</td>
+            <td>SEO</td>
+          </tr>
+        </tbody>
+      </table>
+      <section class="notes">
+      <strong>Notes:</strong>
+      <ul>
+          <li>Your score for the <span class="poor">"Progressive Web App" metric undefined</span>. Please consult the <a href="file:///Users/ekramer/Desktop/audit-cli/report-1520373702.html">/Users/ekramer/Desktop/audit-cli/report-1520373702.html</a> file generated for a detailed breakdown on how to improve it.</li><li>Your score for the <span class="ok">"Accessibility" metric needs imporvement</span>. Please consult the <a href="file:///Users/ekramer/Desktop/audit-cli/report-1520373702.html">/Users/ekramer/Desktop/audit-cli/report-1520373702.html</a> file generated for a detailed breakdown on how to improve it.</li>
+      </ul>
+</section>
+      <section class="vulns">
+    <h3>Included front-end JavaScript libraries with known security vulnerabilities: <br><span class="bgRed"><tr>
+    <td><strong>jQuery@2.1.3</strong></td>
+    <td><strong>2</strong></td>
+    <td><strong>Medium</strong></td>
+    <td><a href="https://snyk.io/vuln/npm:jquery?lh@2.1.3" rel="noreferrer noopener" target="_blank"><strong>https://snyk.io/vuln/npm:jquery?lh@2.1.3</strong></a></td>
+</tr> detected.</span></h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Library Version</th>
+                <th>Vulnerability Count</th>
+                <th>Highest Severity</th>
+                <th>URL</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+    <td><strong>jQuery@2.1.3</strong></td>
+    <td><strong>2</strong></td>
+    <td><strong>Medium</strong></td>
+    <td><a href="https://snyk.io/vuln/npm:jquery?lh@2.1.3" rel="noreferrer noopener" target="_blank"><strong>https://snyk.io/vuln/npm:jquery?lh@2.1.3</strong></a></td>
+</tr>
+        </tbody>
+    </table>
+</section>
+
+      <br><br>
+      <h1>Mozilla Observatory Report: <a href="http://http://ethankr.me">http://ethankr.me</a></h1>
+        <table>
+            <thead>
+            <tr>
+                <th>Score</th>
+                <th>Rule</th>
+                <th>Description</th>
+                <th>Pass?</th>
+            </tr>
+            </thead>
+            <tbody>
+                <tr>
+    <td>-25</td>
+    <td class="undefined">Content security policy</td>
+    <td>Content Security Policy (CSP) header not implemented</td>
+    <td class="undefined">✘</td>
+</tr><tr>
+    <td>-25</td>
+    <td class="undefined">Content security policy</td>
+    <td>Content Security Policy (CSP) header not implemented</td>
+    <td class="undefined">✘</td>
+</tr>
+            </tbody>
+        </table>
+        <section class="results">
+            <div class="grades">
+                <p><strong>Score: </strong> 25</p>
+                <p><strong>Grade: </strong> D</p>
+            </div>
+            <div class="info">
+                <p>For more details on the contents of each section of this report please check out the full report at <a href="https://observatory.mozilla.org/analyze.html?host=ethankr.me">https://observatory.mozilla.org/analyze.html?host=ethankr.me</a>.</p>
+                <br>
+                <p>Additionally please consult this page for answered to commonly asked questions about Mozilla's Observatory Security Report <a href="https://observatory.mozilla.org/faq.html">https://observatory.mozilla.org/faq.html</a>.</p>
+            </div>
+        </section>
+</body>
+</html>

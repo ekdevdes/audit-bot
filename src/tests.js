@@ -210,9 +210,7 @@ async function lighthouse(opts, url, isCalledFromAllMethod = false) {
     } else {
         pdf.generate("lighthouse", opts.file).then(data => {
             console.log(data);
-        }).catch(err => {
-            console.log(err);
-        });
+        }).catch(err => logError(err));
     }
 }
 
@@ -371,9 +369,7 @@ async function observatory(opts, url, isCalledFromAllMethod = false) {
     } else {
         pdf.generate("observatory", opts.file).then(data => {
             console.log(data);
-        }).catch(err => {
-            console.log(err);
-        });
+        }).catch(err => logError(err));
     }
 }
 
@@ -411,24 +407,18 @@ async function all(opts, url) {
         combinedPDFData = lresp;
         pdf.generate("lighthouse", opts.file).then(data => {
             console.log(data);
-        }).catch(err => {
-            console.log(err);
-        });
+        }).catch(err => logError(err));
     } else if(oresp && !lresp) {
             combinedPDFData = oresp;
             pdf.generate("lighthouse", opts.file).then(data => {
                 console.log(data);
-            }).catch(err => {
-                console.log(err);
-            });
+            }).catch(err => logError(err));
     } else if(lresp && oresp) {
             combinedPDFData = Object.assign(lresp, oresp);
             
-            pdf.generate("all", combinedPDFData).then(data => {
+            pdf.generate("all", opts.file).then(data => {
                 console.log(data);
-            }).catch(err => {
-                console.log(err);
-            });
+            }).catch(err => logError(err));
     }
 }
 
