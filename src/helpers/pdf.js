@@ -279,55 +279,20 @@ async function generate(testName, pdfPath) {
                  }
             })
 
+            const generatedPDFPath = `${resolvedPath}/${urlFormatter.domainOnlyURL(templateData.url)}-audit-${unixTimeStamp}.pdf`;
             
-        // await fs.writeFileAsync(generatedHTMLPath, generatedHTMLContents, "utf8");
+            await fs.writeFileAsync(generatedHTMLPath, generatedHTMLContents, "utf8");
+            await exec(`html-pdf ${generatedHTMLPath} ${generatedPDFPath}`);
+            // await fs.unlinkAsync(generatedHTMLPath);
+
+            spinner.stop().clear();
+
+            return `Done! PDF Saved to ${chalk.cyan.bold.underline(generatedPDFPath)}.`;
         }
     }
 
     return;
 }
-
-addData("url", "http://ethankr.me")
-addData("pwa", {
-    score: 1, 
-    class: "poor"
-})
-addData("performance", {
-    score: 1, 
-    class: "poor"
-})
-addData("accessibility", {
-    score: 1, 
-    class: "poor"
-})
-addData("bestpractices", {
-    score: 1, 
-    class: "poor"
-})
-addData("seo", {
-    score: 1, 
-    class: "poor"
-})
-addData("score", 25)
-addData("grade", "D")
-addData("metrics", [
-    {name: "Progressive Web App", gradE: "is poor", class: "poor"},
-    {name: "Accessibility", grade: "needs imporvement", class: "ok"}
-])
-addData("vulns", {
-    total: 1,
-    vulns: [
-        {libraryVersion: "jQuery@2.1.3", vulnCount: 2, highestSeverity: "Medium", url: "https://snyk.io/vuln/npm:jquery?lh@2.1.3"}
-    ]
-})
-addData("pathtolighthousereport", path.resolve(`report-${unixTimeStamp}.html`))
-addData("rules", [
-    {score: -25, slug: 'content-security-policy', desc: "Content Security Policy (CSP) header not implemented", isPassed: false },
-    {score: -25, slug: 'content-security-policy', desc: "Content Security Policy (CSP) header not implemented", isPassed: false }
-])
-generate("all", ".")
-    .then(data => data)
-    .catch(err => logError(err.message)) /*?  */;
 
 module.exports = {
     addData,
