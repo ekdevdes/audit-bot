@@ -2,13 +2,12 @@
 
 /* TODO: 
 
-Integrate PDF generation back into lighthouse and observatory tests
-Make the lighthouse save its report html file to the -f path if the option exists
+Fix PDF generation bug on some more modern macs
 Integrate the google mobile friendliness test API into the lighthouse test
 Add page load speed to lighthouse output
 Add a "pagespeed" test that uses Google's pagespeed insights API
-Add HTTPS mixed content analysis that comes with lighthouse cli v2.9
-Style the PDF outputs a little more */
+Add HTTPS mixed content analysis that comes with lighthouse cli v2.9 
+*/
 
 // Libraries
 const exec = require("shell-exec"); // used to exec cli commands like lighthouse and observatory
