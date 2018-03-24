@@ -1,4 +1,7 @@
 # audit-cmd
+                
+[![Known Vulnerabilities](https://snyk.io/test/github/ekdevdes/audit-cli/badge.svg?targetFile=package.json)](https://snyk.io/test/github/ekdevdes/audit-cli?targetFile=package.json)
+
 A command line tool that allows to run Google Lighthouse and Mozilla Observatory tests for security, best practices, SEO, PWA compliance, and accesibility on local and public urls
 
 ## Installation
