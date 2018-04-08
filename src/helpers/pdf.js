@@ -7,7 +7,6 @@ const ora = require("ora"); // colorful cli spinners
 const expandObject = require("expand-object"); // expand a.b.c to {a: b: {c: ""}}
 const bluebird = require("bluebird"); // library for "promisifying" all functions of a module
 const fs = bluebird.promisifyAll(require("fs")); // Promisify thge "fs" module (http://bit.ly/2H77JXE)
-const once = require("once") // used to generate the html results of the tests only once
 
 // Local Libs
 const urlFormatter = require("./url"); // run simple tests on urls (e.g whether its local or not, get only the domain)
@@ -109,6 +108,22 @@ function regexForSection(sectionName) {
     }
 }
 
+function isTest(testName) {
+    if(testName === "lighthouse") {
+        return templateData.hasOwnProperty("scores") 
+            && Object.keys(templateData.scores).length > 0
+            && templateData.hasOwnProperty("metrics")
+            && templateData.hasOwnProperty("vulns")
+            && templateData.hasOwnProperty("pathtolighthousereport");
+    } else if(testName === "observatory") {
+        return templateData.hasOwnProperty("scores") 
+            && Object.keys(templateData.scores).length === 0
+            && templateData.hasOwnProperty("rules")
+            && templateData.hasOwnProperty("score")
+            && templateData.hasOwnProperty("grade");
+    }
+}
+
 // Public functions
 // adds a piece of data to an internal object that will ultimately be used to fill in template data
 function addData(key, data) {
@@ -130,173 +145,200 @@ function addData(key, data) {
    }
 }
 
-function getTemplateData() {
-    return templateData;
-}
-
 // generates a PDF with data from an internal object (built by addData() method) and uses that info to fill in an HTML template then converts that HTML template to a PDF
 async function generate(testName, pdfPath) {
-    
-    if(typeof pdfPath === "string" && pdfPath !== "") {
-        const resolvedPath = path.resolve(pdfPath);
-        const generatedHTMLPath = path.resolve(__dirname, `../generated/test-${unixTimeStamp}.html`);
+    const spinner = ora({
+        text: "Generating PDF...",
+        color: "blue"
+    }); 
 
-        const spinner = ora({
-            text: "Generating PDF...",
-            color: "blue"
-        }); 
-
-        const templateContents = {
-            test: await fs.readFileAsync(path.resolve(__dirname, `../pdf-generation-template/templates/${testName}.html`), "utf8"),
-            lists: {
-                notes: await fs.readFileAsync(path.resolve(__dirname, `../pdf-generation-template/blocks/notes.html`), "utf8"),
-                vulns: await fs.readFileAsync(path.resolve(__dirname, `../pdf-generation-template/blocks/vulns.html`), "utf8"),
+    const data = {
+        paths: {
+            full: path.resolve(pdfPath),
+            htmlOutput: path.resolve(__dirname, `../generated/test-${unixTimeStamp}.html`),
+            pdfOutput: `${path.resolve(pdfPath)}/${urlFormatter.domainOnlyURL(templateData.url)}-audit-${unixTimeStamp}.pdf`
+        },
+        contents: {
+            test: "",
+            notes: {
+                list: "",
+                item: ""
             },
-            listItems: {
-                note: await fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/note.html"), "utf8"),
-                vuln: await fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/vuln.html"), "utf8"),
-                obsRule: await fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/obsRule.html"), "utf8")
+            vulns: {
+                list: "",
+                item: ""
+            },
+            obsRule: {
+                item: ""
             }
-        }
-
-        if(templateContents.test) {
-            const generatedHTMLContents = templateContents.test.replace(regexForSection(testName), (match) => {
-                match = trimCurlyBraces(match)
- 
-                 switch (match) {
-                     case "url":
-                     case "pathtolighthousereport":
-                     case "score":
-                     case "grade":
-                         return templateData[match];
- 
-                     case "section.notes":
-                         let contentForListItems = "";
-                         const {lists: { notes }, listItems: { note }} = templateContents;
- 
-                         if(note) {
-                             templateData.metrics.map(metric => {
-                                 contentForListItems += note.replace(regexForSection("note"), (match) => {
-                                     match = trimCurlyBraces(match)
- 
-                                     switch (match) {
-                                         case "metric.class":
-                                             return metric.class;
-                                         case "metric.name":
-                                             return metric.name;
-                                         case "metric.grade":
-                                             return metric.grade;
-                                     
-                                         default:
-                                             return templateData.pathtolighthousereport;
-                                     }
-                                 })
-                              });
- 
-                              if(notes) {
-                                 return notes.replace(regexForSection("section.notes"), contentForListItems);
-                              } 
- 
-                              return contentForListItems;
-                         }
- 
-                         return match;
- 
-                     case "section.vulns":
-                         let contentForTable = "";
-                         const {lists: { vulns }, listItems: { vuln }} = templateContents;
- 
-                         if(vuln) {
-                             templateData.vulns.vulns.map(item => {
-                                 contentForTable += vuln.replace(regexForSection("vuln"), (match) => {
-                                     match = trimCurlyBraces(match)
- 
-                                     switch (match) {
-                                         case "vuln.libraryVersion":
-                                             return item.libraryVersion;
-                                         case "vuln.vulnCount":
-                                             return item.vulnCount;
-                                         case "vuln.highestSeverity":
-                                             return item.highestSeverity;
-                                     
-                                         default:
-                                             return item.url;
-                                     }
-                                 })
-                              });
- 
-                              if(vulns) {
-                                 return vulns.replace(regexForSection("section.vulns"), contentForTable);
-                              } 
- 
-                              return contentForTable;
-                         }
- 
-                         return match;
-                     
-                     case "host":
-                         return urlFormatter.domainOnlyURL(templateData.url);
- 
-                     
-                     case "section.obsRule":
-                         let contentForRulesTable = "";
-                         const {listItems: { obsRule }} = templateContents;
- 
-                         if(obsRule) {
-                             templateData.rules.map(rule => {
-                                 contentForRulesTable += obsRule.replace(regexForSection("section.obsRule"), (match) => {
-                                     match = trimCurlyBraces(match)
- 
-                                     switch (match) {
-                                         case "rule.score":
-                                             return rule.score;
-                                         case "rule.class":
-                                             return rule.class;
-                                         case "rule.slug":
-                                             return formatRuleName(rule.slug);
-                                         case "rule.desc":
-                                             return rule.desc;
- 
-                                         default:
-                                             return (rule.isPassed) ? "\u2714" : "\u2718";
-                                     }
-                                 })
-                              });
- 
-                              return contentForRulesTable;
-                         }
- 
-                         return match;
- 
-                     default:
-                         if(match.includes("scores.")) {
-                             const [name, prop] = match.replace("scores.", "").split(".")
- 
-                             return templateData.scores[name][prop];
-                         }
-                         
-                         return match;
-                 }
-            })
-
-            const generatedPDFPath = `${resolvedPath}/${urlFormatter.domainOnlyURL(templateData.url)}-audit-${unixTimeStamp}.pdf`;
-            
-            await fs.writeFileAsync(generatedHTMLPath, generatedHTMLContents, "utf8");
-            await exec(`html-pdf ${generatedHTMLPath} ${generatedPDFPath}`);
-            // await fs.unlinkAsync(generatedHTMLPath);
-
-            spinner.stop().clear();
-
-            return `Done! PDF Saved to ${chalk.cyan.bold.underline(generatedPDFPath)}.`;
         }
     }
 
-    return;
+    Promise.all([
+        fs.readFileAsync(path.resolve(__dirname, `../pdf-generation-template/templates/${testName}.html`), "utf8"),
+        fs.readFileAsync(path.resolve(__dirname, `../pdf-generation-template/blocks/notes.html`), "utf8"),
+        fs.readFileAsync(path.resolve(__dirname, `../pdf-generation-template/blocks/vulns.html`), "utf8"),
+        fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/note.html"), "utf8"),
+        fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/vuln.html"), "utf8"),
+        fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/obsRule.html"), "utf8")
+    ]).then(([
+        test, 
+        notesList, 
+        vulnsList, 
+        noteItem, 
+        vulnItem, 
+        obsRuleItem
+    ]) => {
+        data.contents.test = test
+        data.contents.notes.list = notesList
+        data.contents.notes.item = noteItem
+        data.contents.vulns.list = vulnsList
+        data.contents.vulns.item = vulnItem
+        data.contents.obsRule.item = obsRuleItem
+    
+        if(isTest("lighthouse")) {
+            data.contents.test = data.contents.test.replace(regexForSection(testName), (match) => {
+                match = trimCurlyBraces(match)
+
+                switch (match) {
+                    case "url":
+                    case "pathtolighthousereport":
+                        return templateData[match];
+
+                    case "section.notes":
+                        let sectionContents = "";
+
+                        templateData.metrics.map(metric => {
+                            sectionContents += data.contents.notes.item.replace(regexForSection("note"), (match) => {
+                                match = trimCurlyBraces(match)
+
+                                switch (match) {
+                                    case "metric.class":
+                                        return metric.class;
+    
+                                    case "metric.name":
+                                        return metric.name;
+    
+                                    case "metric.grade":
+                                        return metric.grade;
+    
+                                    case "pathtolighthousereport":
+                                        return templateData.pathtolighthousereport;
+                                }
+                            });
+                        })
+
+                        data.contents.notes.list = data.contents.notes.list.replace(regexForSection("section.notes"), sectionContents)
+
+                        return data.contents.notes.list;
+
+                    case "section.vulns":
+                        let theSectionContents = "";
+
+                        templateData.vulns.vulns.map(vuln => {
+                            theSectionContents += data.contents.vulns.item.replace(regexForSection("vuln"), (match) => {
+                                match = trimCurlyBraces(match)
+
+                                switch (match) {
+                                    case "vuln.libraryVersion":
+                                        return vuln.libraryVersion;
+
+                                    case "vuln.vulnCount":
+                                        return vuln.vulnCount;
+
+                                    case "vuln.highestSeverity":
+                                        return vuln.highestSeverity;
+
+                                    case "vuln.url":
+                                        return vuln.url;
+                                }
+                            });
+                        })
+
+                        data.contents.vulns.list = data.contents.vulns.list.replace(regexForSection("section.vulns"), (match) => {
+                            match = trimCurlyBraces(match)
+
+                            switch (match) {
+                                case "vuln":
+                                    return theSectionContents;
+                                
+                                case "vuln.counts":
+                                    return templateData.vulns.total;
+                            }
+                        })
+
+                        return data.contents.vulns.list;
+
+                    default:
+                        if(match.includes("scores.")) {
+                            const [name, prop] = match.replace("scores.", "").split(".")
+
+                            return templateData.scores[name][prop];
+                        }
+                        break;
+                }
+            })
+        } else if(isTest("observatory")) {
+            data.contents.test = data.contents.test.replace(regexForSection(testName), (match) => {
+                match = trimCurlyBraces(match);
+
+                switch (match) {
+                    case "url":
+                    case "host":
+                    case "score":
+                    case "grade":
+                        return templateData[match];
+
+                    case "section.obsRule":
+                        let sectionContents = "";
+
+                        templateData.rules.map(rule => {
+                            sectionContents += data.contents.obsRule.item.replace(regexForSection("section.obsRule"), (match) => {
+                                match = trimCurlyBraces(match)
+
+                                 switch (match) {
+                                     case "rule.score":
+                                         return rule.score;
+
+                                     case "rule.class":
+                                         return rule.class;
+
+                                     case "rule.slug":
+                                         return formatRuleName(rule.slug);
+
+                                     case "rule.desc":
+                                         return rule.desc;
+
+                                    case "rule.isPassed":
+                                        return (rule.isPassed) ? "\u2714" : "\u2718";
+
+                                 }
+
+                            })
+                        })
+
+                        return sectionContents;
+                }
+            })
+        }
+
+        fs.writeFile(data.paths.htmlOutput, data.contents.test, "utf8", () => {
+            console.log(`Done! PDF saved to: ${formatFileName(data.paths.pdfOutput)}.`)
+
+            exec(`html-pdf ${data.paths.htmlOutput} ${data.paths.pdfOutput}`)
+                .then(data => fs.unlink(data.paths.htmlOutput, () => {
+                        spinner.stop().clear()
+                    })
+                )
+                .catch(err => fs.unlink(data.paths.htmlOutput, () => {
+                    spinner.stop().clear()
+                }))
+        })
+
+    }).catch(err => {})
 }
 
 module.exports = {
     addData,
-    generate,
-    getTemplateData,
-    templateData
+    generate
 };

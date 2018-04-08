@@ -26,7 +26,7 @@ const unixTimeStamp = unix(new Date()); // a unique unix timestamp
 
 // opts: the command line options passed in
 // url: url to run test on
-async function lighthouse(opts, url, isCalledFromAllMethod = false) {
+async function lighthouse(opts, url) {
 
     pdf.addData("url", url);
 
@@ -205,18 +205,16 @@ async function lighthouse(opts, url, isCalledFromAllMethod = false) {
     // Add a line of padding so that when the all method calls this function there will be space between this output and the next test output
     logNewLine();
 
-    if(isCalledFromAllMethod) {
-        return pdf.getTemplateData();
-    } else {
-        pdf.generate("lighthouse", opts.file).then(data => {
-            console.log(data);
-        }).catch(err => logError(err));
+    if(typeof opts.file === "string" && opts.file !== "") {
+        pdf.generate("lighthouse", opts.file)
+            .then(data => {})
+            .catch(err => logError(err));
     }
 }
 
 // opts: the command line options passed in
 // url: url to run test on
-async function observatory(opts, url, isCalledFromAllMethod = false) {
+async function observatory(opts, url) {
 
     pdf.addData("url", url);
     pdf.addData("host", urlFormatter.domainOnlyURL(url));
@@ -364,12 +362,10 @@ async function observatory(opts, url, isCalledFromAllMethod = false) {
     // delete the files we pulled all this data in so as not to bloat the users system with unecessary files
     exec(`rm -rf report-${unixTimeStamp}-observatory.json report-${unixTimeStamp}-observatory.txt`);
 
-    if(isCalledFromAllMethod) {
-        return pdf.getTemplateData();
-    } else {
-        pdf.generate("observatory", opts.file).then(data => {
-            console.log(data);
-        }).catch(err => logError(err));
+    if(typeof opts.file === "string" && opts.file !== "") {
+        pdf.generate("observatory", opts.file)
+            .then(data => {})
+            .catch(err => logError(err));
     }
 }
 
@@ -383,43 +379,10 @@ async function pagespeed(opts, url) {
 // url: url to run test on
 async function all(opts, url) {
 
-    let [lerr, lresp] = await on(lighthouse(opts, url, true));
-    let [oerr, oresp] = await on(observatory(opts, url, true));
+    Promise.all([lighthouse(opts, url, true), observatory(opts, url, true)])
+        .then(resp => console.log(resp))
+        .catch(err => logError(err))
 
-    if(lerr) {
-        logError(lerr);
-    } else if(oerr) {
-        logError(oerr);
-    }
-
-    let combinedPDFData = {};
-
-    /* if we have data from the lighthouse method that will be used to generate the PDF of the results
-    and only data from the lighhouse method then just call the lighthouse PDF generation function
-    
-    If we only have info on the PDF generation data from observatory and not from lighthouse then 
-    just generate an observatory results PDF
-    
-    If we have data that will be used to generate a PDF of the results from both tests then 
-    combine the data using Object.assign and pass that data to pdf.generate to generate a combined PDF
-    of both test results */
-    if(lresp && !oresp) {
-        combinedPDFData = lresp;
-        pdf.generate("lighthouse", opts.file).then(data => {
-            console.log(data);
-        }).catch(err => logError(err));
-    } else if(oresp && !lresp) {
-            combinedPDFData = oresp;
-            pdf.generate("lighthouse", opts.file).then(data => {
-                console.log(data);
-            }).catch(err => logError(err));
-    } else if(lresp && oresp) {
-            combinedPDFData = Object.assign(lresp, oresp);
-            
-            pdf.generate("all", opts.file).then(data => {
-                console.log(data);
-            }).catch(err => logError(err));
-    }
 }
 
 module.exports = {
