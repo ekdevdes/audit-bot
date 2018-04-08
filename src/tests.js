@@ -379,9 +379,8 @@ async function pagespeed(opts, url) {
 // url: url to run test on
 async function all(opts, url) {
 
-    Promise.all([lighthouse(opts, url, true), observatory(opts, url, true)])
-        .then(resp => console.log(resp))
-        .catch(err => logError(err))
+    await lighthouse(opts, url);
+    await observatory(opts, url);
 
 }
 
