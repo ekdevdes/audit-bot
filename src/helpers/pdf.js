@@ -1,5 +1,6 @@
 // Libraries
 const path = require("path");
+const pdf = require("phantom-html2pdf");
 const unix = require("to-unix-timestamp"); // get the current unix timestamp
 const chalk = require("chalk"); // allows colorful console logs
 const exec = require("shell-exec"); // used to exec cli commands like lighthouse and observatory
@@ -155,8 +156,8 @@ async function generate(testName, pdfPath) {
     const data = {
         paths: {
             full: path.resolve(pdfPath),
-            htmlOutput: path.resolve(__dirname, `../generated/test-${unixTimeStamp}.html`),
-            pdfOutput: `${path.resolve(pdfPath)}/${urlFormatter.domainOnlyURL(templateData.url)}-audit-${unixTimeStamp}.pdf`
+            htmlOutput: path.resolve(__dirname, `../generated/test:${testName}-${unixTimeStamp}.html`),
+            pdfOutput: `${path.resolve(pdfPath)}/${urlFormatter.domainOnlyURL(templateData.url)}-audit:${testName}-${unixTimeStamp}.pdf`
         },
         contents: {
             test: "",
@@ -323,16 +324,15 @@ async function generate(testName, pdfPath) {
         }
 
         fs.writeFile(data.paths.htmlOutput, data.contents.test, "utf8", () => {
-            console.log(`Done! PDF saved to: ${formatFileName(data.paths.pdfOutput)}.`)
-
-            exec(`html-pdf ${data.paths.htmlOutput} ${data.paths.pdfOutput}`)
-                .then(data => fs.unlink(data.paths.htmlOutput, () => {
-                        spinner.stop().clear()
-                    })
-                )
-                .catch(err => fs.unlink(data.paths.htmlOutput, () => {
+            pdf.convert({html: data.paths.htmlOutput}, (err, result) => {
+                result.toFile(data.paths.pdfOutput, () => {
                     spinner.stop().clear()
-                }))
+                    console.log(`Done! PDF saved to: ${formatFileName(data.paths.pdfOutput)}.\n`)   
+
+                    // delete the temp html file
+                    fs.unlink(data.paths.htmlOutput, () => {})
+                })
+            })
         })
 
     }).catch(err => {})

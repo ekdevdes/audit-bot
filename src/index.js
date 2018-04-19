@@ -2,7 +2,7 @@
 
 /* TODO: 
 
-Fix PDF generation bug on some more modern macs
+Fix issue where the observatory pdf doesn't have any data in the generated pdf (or in the html file thats generated)
 Integrate the google mobile friendliness test API into the lighthouse test
 Add page load speed to lighthouse output
 Add a "pagespeed" test that uses Google's pagespeed insights API
