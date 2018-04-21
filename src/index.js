@@ -2,11 +2,14 @@
 
 /* TODO: 
 
-Fix issue where the observatory pdf doesn't have any data in the generated pdf (or in the html file thats generated)
+v1
+Speed of lighthouse test results generation
 Integrate the google mobile friendliness test API into the lighthouse test
 Add page load speed to lighthouse output
-Add a "pagespeed" test that uses Google's pagespeed insights API
-Add HTTPS mixed content analysis that comes with lighthouse cli v2.9 
+
+v2
+HTTPS mixed content analysis that comes with lighthouse cli v2.9
+PageSpeed test that uses Google's pagespeed insights API
 */
 
 // Libraries

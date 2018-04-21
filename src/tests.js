@@ -102,7 +102,7 @@ async function lighthouse(opts, url) {
     testResult.reportCategories.map(category => {
         let score = Math.ceil(category.score); // round the category score ot the nearest whole number
         let pdfDataObj = {score, class: ""};
-        let metricDataObj = {name: category.name, grade: "", class: ""};
+        let metricDataObj = {name: category.name, grade: "", class: "", slug: category.name.toLowerCase().replace(/ /g, "-")};
 
         if(category.score >= ratings.pass) {
             score = chalk.green.bold(score);
@@ -372,7 +372,7 @@ async function observatory(opts, url) {
 // opts: the command line options passed in
 // url: url to run test on
 async function pagespeed(opts, url) {
-    console.log(opts, url, "pagespeed");
+
 }
 
 // opts: the command line options passed in

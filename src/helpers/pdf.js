@@ -57,7 +57,8 @@ const fieldNames = {
         'metric.name',
         'metric.grade',
         'metric.class',
-        'pathtolighthousereport'
+        'pathtolighthousereport',
+        'slug'
     ],
     'section.notes': [
         'notes'
@@ -111,17 +112,9 @@ function regexForSection(sectionName) {
 
 function isTest(testName) {
     if(testName === "lighthouse") {
-        return templateData.hasOwnProperty("scores") 
-            && Object.keys(templateData.scores).length > 0
-            && templateData.hasOwnProperty("metrics")
-            && templateData.hasOwnProperty("vulns")
-            && templateData.hasOwnProperty("pathtolighthousereport");
+        return !templateData.hasOwnProperty("rules");
     } else if(testName === "observatory") {
-        return templateData.hasOwnProperty("scores") 
-            && Object.keys(templateData.scores).length === 0
-            && templateData.hasOwnProperty("rules")
-            && templateData.hasOwnProperty("score")
-            && templateData.hasOwnProperty("grade");
+        return templateData.hasOwnProperty("rules");
     }
 }
 
@@ -151,13 +144,13 @@ async function generate(testName, pdfPath) {
     const spinner = ora({
         text: "Generating PDF...",
         color: "blue"
-    }); 
+    });
 
     const data = {
         paths: {
             full: path.resolve(pdfPath),
-            htmlOutput: path.resolve(__dirname, `../generated/test:${testName}-${unixTimeStamp}.html`),
-            pdfOutput: `${path.resolve(pdfPath)}/${urlFormatter.domainOnlyURL(templateData.url)}-audit:${testName}-${unixTimeStamp}.pdf`
+            htmlOutput: path.resolve(__dirname, `../generated/test.${testName}-${unixTimeStamp}.html`),
+            pdfOutput: `${path.resolve(pdfPath)}/${urlFormatter.domainOnlyURL(templateData.url)}-audit.${testName}-${unixTimeStamp}.pdf`
         },
         contents: {
             test: "",
@@ -190,6 +183,7 @@ async function generate(testName, pdfPath) {
         vulnItem, 
         obsRuleItem
     ]) => {
+
         data.contents.test = test
         data.contents.notes.list = notesList
         data.contents.notes.item = noteItem
@@ -225,6 +219,9 @@ async function generate(testName, pdfPath) {
     
                                     case "pathtolighthousereport":
                                         return templateData.pathtolighthousereport;
+
+                                    case "slug":
+                                        return metric.slug;
                                 }
                             });
                         })
@@ -327,10 +324,10 @@ async function generate(testName, pdfPath) {
             pdf.convert({html: data.paths.htmlOutput}, (err, result) => {
                 result.toFile(data.paths.pdfOutput, () => {
                     spinner.stop().clear()
-                    console.log(`Done! PDF saved to: ${formatFileName(data.paths.pdfOutput)}.\n`)   
+                    console.log(`PDF of ${testName} report saved to: ${formatFileName(data.paths.pdfOutput)}.\n`)   
 
                     // delete the temp html file
-                    fs.unlink(data.paths.htmlOutput, () => {})
+                    //fs.unlink(data.paths.htmlOutput, () => {})
                 })
             })
         })
