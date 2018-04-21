@@ -30,6 +30,11 @@ async function lighthouse(opts, url) {
 
     pdf.addData("url", url);
 
+    // note you can totally do "lighthouse --chrome-flags='headless' --quiet --output=json --output=html --output-path=lighthouse" 
+    // and it will output both html and json reports at ./lighthouse.report.json and ./lighthouse.report.html
+    //
+    // having the direct json should save some processing time since I won't have to search the DOM of the HTML doc for the JSON
+    // then parse it as JSON, I can just use it right away
     let cmd = `lighthouse ${url} --chrome-flags="--headless" --quiet --output=html --output-path=./report-${unixTimeStamp}.html`;
     const spinner = ora({
         text: "Running lighthouse tests...",
