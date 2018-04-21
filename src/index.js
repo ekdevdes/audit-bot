@@ -6,6 +6,7 @@ v1
 Speed of lighthouse test results generation
 Integrate the google mobile friendliness test API into the lighthouse test
 Add page load speed to lighthouse output
+Make help docs (report --help) better (might have to use a different pkg than yargs for this)
 
 v2
 HTTPS mixed content analysis that comes with lighthouse cli v2.9
