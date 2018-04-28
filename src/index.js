@@ -3,7 +3,6 @@
 /* TODO: 
 
 v1
-Speed of lighthouse test results generation
 Modify lighthouse test to output json and html and then just use the resulting JSON file from the test instead of parsing the JSON from the DOM of the HTML version of the report
 Integrate the google mobile friendliness test API into the lighthouse test
 Add page load speed to lighthouse output
