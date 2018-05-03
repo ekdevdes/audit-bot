@@ -1,24 +1,41 @@
 // Libraries
 const path = require("path");
 const pdf = require("phantom-html2pdf");
-const unix = require("to-unix-timestamp"); // get the current unix timestamp
-const chalk = require("chalk"); // allows colorful console logs
-const exec = require("shell-exec"); // used to exec cli commands like lighthouse and observatory
-const ora = require("ora"); // colorful cli spinners
-const expandObject = require("expand-object"); // expand a.b.c to {a: b: {c: ""}}
-const bluebird = require("bluebird"); // library for "promisifying" all functions of a module
-const fs = bluebird.promisifyAll(require("fs")); // Promisify thge "fs" module (http://bit.ly/2H77JXE)
+
+// Get the current unix timestamp
+const unix = require("to-unix-timestamp");
+
+// Allows colorful console logs
+const chalk = require("chalk");
+
+// Used to exec cli commands like lighthouse and observatory
+const exec = require("shell-exec");
+
+// Used to expand a.b.c to {a: b: {c: ""}}
+const expandObject = require("expand-object");
+
+// Library for "promisifying" all functions of a module
+const bluebird = require("bluebird");
+
+// Promisify thge "fs" module (http://bit.ly/2H77JXE)
+const fs = bluebird.promisifyAll(require("fs"));
 
 // Local Libs
-const urlFormatter = require("./url"); // run simple tests on urls (e.g whether its local or not, get only the domain)
+// Run simple tests on urls (e.g whether its local or not, get only the domain)
+const urlFormatter = require("./url");
+
+// Logs warnings and errors to the console using chalk.js for pretty errors
 const { 
     logError,
     formatFileName,
     formatRuleName
-} = require("./logger"); // logs warnings and errors to the console using chalk.js for pretty errors
-const ratings = require("./ratings")(); // maps a test's score to its grade (e.g. 80 = fail, 70 = average, 60 = fail)
+} = require("./logger");
 
-const unixTimeStamp = unix(new Date()); // a unique unix timestamp
+// Maps a test's score to its grade (e.g. 80 = fail, 70 = average, 60 = fail)
+const ratings = require("./ratings")();
+
+// A unique unix timestamp
+const unixTimeStamp = unix(new Date());
 
 // Private functions and data
 const fieldNames = {
@@ -141,11 +158,6 @@ function addData(key, data) {
 
 // generates a PDF with data from an internal object (built by addData() method) and uses that info to fill in an HTML template then converts that HTML template to a PDF
 async function generate(testName, pdfPath) {
-    const spinner = ora({
-        text: "Generating PDF...",
-        color: "blue"
-    });
-
     const data = {
         paths: {
             full: path.resolve(pdfPath),
@@ -323,11 +335,10 @@ async function generate(testName, pdfPath) {
         fs.writeFile(data.paths.htmlOutput, data.contents.test, "utf8", () => {
             pdf.convert({html: data.paths.htmlOutput}, (err, result) => {
                 result.toFile(data.paths.pdfOutput, () => {
-                    spinner.stop().clear()
-                    console.log(`PDF of ${testName} report saved to: ${formatFileName(data.paths.pdfOutput)}.\n`)   
+                    console.log(`PDF of ${testName} report saved to: ${formatFileName(data.paths.pdfOutput)}.\n\n`)   
 
                     // delete the temp html file
-                    //fs.unlink(data.paths.htmlOutput, () => {})
+                    fs.unlink(data.paths.htmlOutput, (err) => {})
                 })
             })
         })
