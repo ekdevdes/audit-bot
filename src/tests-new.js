@@ -112,7 +112,7 @@ async function lighthouse({ verbose, outputPath }, url) {
 
             logMultilineMsg([
                 `${chalk.cyan.bold("\nGoogle Lighthouse Report")}: ${lhdata.url}\n`,
-                `All scores are out of 100. For more details on the contents of each section of this report please check out the full report at ${formatFileName(path.resolve(`./report-${unixTimeStamp}.html`))}.\n`
+                `All scores are out of 100. For more details on the contents of each section of this report please check out the full report at ${formatFileName(path.resolve(`./${unixTimeStamp}.report.html`))}.\n`
             ]);
 
             const table = new easyTable;
@@ -131,14 +131,14 @@ async function lighthouse({ verbose, outputPath }, url) {
                     pdfDataObj.class = "good";
                 } else if(category.score > ratings.fail && category.score <= ratings.pass) {
                     score = chalk.yellow.bold(score);
-                    notes.push(`* Your score for the ${chalk.bgYellow.black.bold(`"${category.name}" metric needs improvement`)}. Please consult the ${formatFileName(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on what to improve.`);
+                    notes.push(`* Your score for the ${chalk.bgYellow.black.bold(`"${category.name}" metric needs improvement`)}. Please consult the ${formatFileName(`${unixTimeStamp}.report.html`)} file generated for a detailed breakdown on what to improve.`);
 
                     pdfDataObj.class = "ok";
                     metricDataObj.class = "ok";
                     metricDataObj.grade = "needs improvement";
                 } else if(category.score <= ratings.fail) {
                     score = chalk.red.bold(score);
-                    notes.push(`* Your score for the ${chalk.bgRed.white.bold(`"${category.name}" metric is poor`)}. Please consult the ${formatFileName(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on how to improve it`);
+                    notes.push(`* Your score for the ${chalk.bgRed.white.bold(`"${category.name}" metric is poor`)}. Please consult the ${formatFileName(`${unixTimeStamp}.report.html`)} file generated for a detailed breakdown on how to improve it`);
 
                     pdfDataObj.class = "poor";
                     metricDataObj.class = "poor";
@@ -245,6 +245,71 @@ async function lighthouse({ verbose, outputPath }, url) {
 
 // opts: the command line options passed in
 // url: url to run test on
+async function observatory(opts, url) {
+    pdf.addData("url", url);
+    pdf.addData("host", urlFormatter.domainOnlyURL(url));
+
+    // lets show a little emoji spinner while we run the test
+    const spinner = ora({
+        text: "Running observatory tests...",
+        spinner: "moon"
+    }); 
+
+    // if the user passed in a localhost URL we'll simply tell them that observatory doesn't support localhost URLs and then stop execution of the function
+    if(urlFormatter.isLocal(url)) {
+        logWarning("Localhost URL detected, Mozilla Observatory does not support localhost URLs, aborting test...");
+
+        return;
+    }
+
+    const cmd = spawn('observatory', [
+        urlFormatter.domainOnlyURL(url),
+        '--format=json'
+    ])
+
+    cmd.stdout.on('data', (data) => {
+        // Parse the output as a string (its currently a Buffer)
+        data = data.toString()
+
+        // Account for errors thrown by the command and innerrantly saved in JSON file
+        if(data.includes("observatory [ERROR]")) {
+            spinner.stop()
+
+            logError(data.replace("observatory [ERROR] ", ""));
+
+            return;
+        }
+        
+        const obsDataWithoutOverallScore = JSON.parse(data)
+        const overallScoreCMD = spawn('observatory', [
+            urlFormatter.domainOnlyURL(url),
+            '--format=csv'
+        ])
+
+        overallScoreCMD.stdout.on('data', (dataWithOverallScore) => {
+            spinner.stop()
+
+            dataWithOverallScore = dataWithOverallScore.toString()
+        })
+
+        overallScoreCMD.stderr.on('data', (data) => {
+            spinner.stop()
+
+            logError(data.toString())
+
+            return;
+        })
+    })
+
+    cmd.stderr.on('data', (data) => {
+        spinner.stop()
+        
+        logError(data.toString())
+    })
+}
+
+// opts: the command line options passed in
+// url: url to run test on
 async function pagespeed(opts, url) {
 
 }
@@ -260,5 +325,6 @@ async function all(opts, url) {
 
 module.exports = {
     lighthouse,
+    observatory,
     all
 }

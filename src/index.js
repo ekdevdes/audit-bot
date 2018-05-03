@@ -1,5 +1,18 @@
 #!/usr/bin/env node
 
+/* TODO: 
+
+v1
+Finish refactoring the observatory method to remove its dependency on shell-exec
+Integrate the google mobile friendliness test API into the lighthouse test
+Add page load speed to lighthouse output
+Make help docs (report --help) better (might have to use a different pkg than yargs for this)
+
+v2
+HTTPS mixed content analysis that comes with lighthouse cli v2.9
+PageSpeed test that uses Google's pagespeed insights API
+*/
+
 const { spawn } = require('child_process')
 
 // used to validate and parse passed in cli options and style help screen
