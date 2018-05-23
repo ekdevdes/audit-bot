@@ -1,16 +1,28 @@
 // Libraries
 const path = require("path");
-const exec = require("shell-exec"); // used to exec cli commands like lighthouse and observatory
-const chalk = require("chalk"); // allows colorful console logs
-const ora = require("ora"); // colorful cli spinners
-const easyTable = require("easy-table"); // easily output tables in the cli
-const unix = require("to-unix-timestamp"); // get the current unix timestamp
-const bluebird = require("bluebird"); // library for "promisifying" all functions of a module
-const fs = bluebird.promisifyAll(require("fs")); // Promisify thge "fs" module (http://bit.ly/2H77JXE)
-const on = require("await-handler") // easily destructure a async/await err and response
+const { spawn } = require("child_process");
+
+// Allows colorful console logs
+const chalk = require("chalk");
+
+// Colorful cli spinners
+const ora = require("ora");
+
+// Easily output tables in the cli
+const easyTable = require("easy-table");
+
+// Get the current unix timestamp
+const unix = require("to-unix-timestamp");
+
+// Promisify thge "fs" module (http://bit.ly/2H77JXE)
+const fs = require("fs");
+
 
 // Local Libs
-const urlFormatter = require("./helpers/url"); // run simple tests on urls (e.g whether its local or not, get only the domain)
+// Run simple tests on urls (e.g whether its local or not, get only the domain)
+const urlFormatter = require("./helpers/url");
+
+ // Logs warnings and errors to the console using chalk.js for pretty errors
 const { 
     logWarning,
     logError,
@@ -18,209 +30,222 @@ const {
     logMultilineMsg,
     logNewLine,
     formatRuleName
-} = require("./helpers/logger"); // logs warnings and errors to the console using chalk.js for pretty errors
-const pdf = require("./helpers/pdf"); // generates a pdf from passed in object data and applies it to html templates to create the pdf
-const ratings = require("./helpers/ratings")(); // maps a test's score to its grade (e.g. 80 = fail, 70 = average, 60 = fail)
+} = require("./helpers/logger");
 
-const unixTimeStamp = unix(new Date()); // a unique unix timestamp
+// Generates a pdf from passed in object data and applies it to html templates to create the pdf
+const pdf = require("./helpers/pdf");
 
-// opts: the command line options passed in
-// url: url to run test on
-async function lighthouse(opts, url) {
+// Maps a test's score to its grade (e.g. 80 = fail, 70 = average, 60 = fail)
+const ratings = require("./helpers/ratings")();
 
+
+// A unique unix timestamp
+const unixTimeStamp = unix(new Date());
+
+
+async function lighthouse({ verbose, outputPath }, url) {
     pdf.addData("url", url);
 
-    // note you can totally do "lighthouse --chrome-flags='headless' --quiet --output=json --output=html --output-path=lighthouse" 
-    // and it will output both html and json reports at ./lighthouse.report.json and ./lighthouse.report.html
-    //
-    // having the direct json should save some processing time since I won't have to search the DOM of the HTML doc for the JSON
-    // then parse it as JSON, I can just use it right away
-    let cmd = `lighthouse ${url} --chrome-flags="--headless" --quiet --output=html --output-path=./report-${unixTimeStamp}.html`;
     const spinner = ora({
         text: "Running lighthouse tests...",
         spinner: "weather"
-    }); 
+    })
 
-    // if the user specified the verbose option turn off the "quiet" option in lighthouse
-    if(opts.verbose) {
-        cmd = `lighthouse ${url} --chrome-flags="--headless" --output=html --output-path=./report-${unixTimeStamp}.html`;
-    } else {
-        // if the user didn't specify the "verbose" option then we'll show a litle emoji spinner instead while we crunch the numbers
-        
-        spinner.start();
+    // If they don't want verbose output then we just start the spinner we created above
+    if(!verbose) {
+        spinner.start()
     }
 
-    const [err, resp] = await on(exec(cmd));
+    const cmd = spawn('lighthouse', [
+        url,
+        '--chrome-flags=--headless',
+        (verbose) ? '' : '--quiet',
+        '--output=html',
+        '--output=json',
+        `--output-path=./${unixTimeStamp}`
+    ])
 
-    if(err) {
-        spinner.stop().clear();
+    cmd.stdout.on('data', (data) => {
+        spinner.stop()
 
-        logError(err.message);
-    }
-
-    spinner.stop().clear();
-
-    // start another spinner while we format the results
-    const resultsSpinner = ora({
-        text: "Formatting results...",
-        spinner: "earth"
-    });
-
-    resultsSpinner.start();
-
-
-    let [fileErr, contents] = await on(fs.readFileAsync(`report-${unixTimeStamp}.html`));
-    
-    if (fileErr) {
-        resultsSpinner.stop().clear();
-
-        logError(err.message.replace("Error: ", ""));
-    }
-
-    resultsSpinner.stop().clear();
-    pdf.addData("pathToLighthouseReport", path.resolve(`report-${unixTimeStamp}.html`));
-    
-    // convert the buffer obtained as a result to a string
-    contents = contents.toString("utf8");
-
-    const scriptRegex = /<script>(.+)<\/script>/g;
-    const scriptMatches = scriptRegex.exec(contents);
-
-    // the JSON result of the lighthouse test saved as the second script tag inside the generated lighthouse html file
-    const testResult = JSON.parse(scriptMatches[1].substring(0, scriptMatches[1].length - 1).replace("window.__LIGHTHOUSE_JSON__ = ", ""));
-
-    // if the user passed in the "verbose" option add an extra line of padding between the end of the lighthouse logs and and the beginning of our test results
-    if(opts.verbose) {
-        logNewLine();
-    }
-
-    logMultilineMsg([
-        `${chalk.cyan.bold("\nGoogle Lighthouse Report")}: ${testResult.url}`,
-        `All scores are out of 100. For more details on the contents of each section of this report please check out the full report at ${formatFileName(path.resolve(`./report-${unixTimeStamp}.html`))}.\n`
-    ]);
-
-    const table = new easyTable;
-    let notes = [`${chalk.cyan.bold("Notes:")}\n`];
-    let metrics = [];
-
-    // loop over each category of the lighthouse test and pull out the score and write some notes for each category
-    testResult.reportCategories.map(category => {
-        let score = Math.ceil(category.score); // round the category score ot the nearest whole number
-        let pdfDataObj = {score, class: ""};
-        let metricDataObj = {name: category.name, grade: "", class: "", slug: category.name.toLowerCase().replace(/ /g, "-")};
-
-        if(category.score >= ratings.pass) {
-            score = chalk.green.bold(score);
-
-            pdfDataObj.class = "good";
-        } else if(category.score > ratings.fail && category.score <= ratings.pass) {
-            score = chalk.yellow.bold(score);
-            notes.push(`* Your score for the ${chalk.bgYellow.black.bold(`"${category.name}" metric needs improvement`)}. Please consult the ${formatFileName(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on what to improve.`);
-
-            pdfDataObj.class = "ok";
-            metricDataObj.class = "ok";
-            metricDataObj.grade = "needs improvement";
-        } else if(category.score <= ratings.fail) {
-            score = chalk.red.bold(score);
-            notes.push(`* Your score for the ${chalk.bgRed.white.bold(`"${category.name}" metric is poor`)}. Please consult the ${formatFileName(`report-${unixTimeStamp}.html`)} file generated for a detailed breakdown on how to improve it`);
-
-            pdfDataObj.class = "poor";
-            metricDataObj.class = "poor";
-            metricDataObj.grade = "is poor";
+        if(verbose) {
+            console.log(data.toString())
         }
+    })
+    
+    cmd.stderr.on('data', (data) => {
+        spinner.stop()
 
-        if(category.score < ratings.pass) {
-            metrics.push(metricDataObj);
-        }
+        logError(data.toString())
+    })
 
-        pdf.addData(category.id.replace(/-/g, ""), pdfDataObj);
+    cmd.on('close', (code) => {
+        spinner.stop()
 
-        table.cell("Score", score);
-        table.cell("Metric", category.name);
-        table.newRow();
-    });
+        pdf.addData("pathToLighthouseReport", path.resolve(`${unixTimeStamp}.report.html`));
 
-    pdf.addData("metrics", metrics);
+        // Start another spinner while we format the results
+        const resultsSpinner = ora({
+            text: "Formatting results...",
+            spinner: "earth"
+        });
 
-    console.log(table.toString());
-    logMultilineMsg(notes);
+        resultsSpinner.start();
 
-    // get the vulnerable libraries being used in the passed in URL
-    let vulnerabilities = testResult.reportCategories[3].audits[9].result;
-
-    // if we have any vulnerable libraries used in the passed in url...the test name is "no vulnerable libraries"
-    if(!vulnerabilities.score) {
-
-        const vulnTable = new easyTable;
-
-        // add a line of padding between the notes and the vulnerabilities
-        logNewLine();
-
-        logMultilineMsg([
-            `${chalk.cyan.bold("Included front-end JavaScript libraries with known security vulnerabilities:")}`,
-            chalk.bgRed.bold.white(vulnerabilities.displayValue)
-        ]);
-
-        // add a line of padding between the number of vulnerabilities header and the vulnerabilites table
-        logNewLine();
-
-        let vulns = [];
-
-        vulnerabilities.extendedInfo.vulnerabilities.map(vuln => {
-            let lib = `${vuln.name}@${vuln.version}`;
-            let vulnCount = vuln.vulnCount;
-            let url = vuln.pkgLink;
-            let sev = vuln.highestSeverity;
+        fs.readFile(`${unixTimeStamp}.report.json`, 'utf8', (err, data) => {
+            resultsSpinner.stop()
             
-            let vulnDataObj = {
-                libraryVersion: lib,
-                vulnCount,
-                highestSeverity: sev,
-                url
-            };
+            if(err) {
+                logError(err.message)
 
-            if(vuln.highestSeverity === "Medium") {
-                lib = chalk.yellow.bold(lib);
-                vulnCount = chalk.yellow.bold(vulnCount);
-                url = chalk.yellow.bold.underline(vuln.pkgLink);
-                sev = chalk.yellow.bold(sev);
-            } else if(vuln.highestSeverity === "High") {
-                lib = chalk.red.bold(lib);
-                vulnCount = chalk.red.bold(vulnCount);
-                url = chalk.red.bold.underline(url);
-                sev = chalk.red.bold(sev);
+                return;
             }
 
-            vulns.push(vulnDataObj);
+            // Parse the JSON we got from the JSON file that the lighthouse test outputted
+            // into a JSON object (from the string that it currently is)
+            const lhdata = JSON.parse(data);
 
-            vulnTable.cell("Library Version", lib);
-            vulnTable.cell("Vulnerability Count", vulnCount);
-            vulnTable.cell("Highest Severity", sev);
-            vulnTable.cell("URL", url);
-            vulnTable.newRow();
-        });
+            // if the user passed in the "verbose" option add an extra line of padding between the end of the lighthouse logs and and the beginning of our test results
+            if(verbose) {
+                logNewLine();
+            }
 
-        pdf.addData("vulns", {
-            total: vulns.length,
-            vulns
-        });
-        console.log(vulnTable.toString());
-    }
+            logMultilineMsg([
+                `${chalk.cyan.bold("\nGoogle Lighthouse Report")}: ${lhdata.url}\n`,
+                `All scores are out of 100. For more details on the contents of each section of this report please check out the full report at ${formatFileName(path.resolve(`./${unixTimeStamp}.report.html`))}.\n`
+            ]);
 
-    // Add a line of padding so that when the all method calls this function there will be space between this output and the next test output
-    logNewLine();
+            const table = new easyTable;
+            let notes = [`${chalk.cyan.bold("Notes:")}\n`];
+            let metrics = [];
 
-    if(typeof opts.file === "string" && opts.file !== "") {
-        pdf.generate("lighthouse", opts.file)
-            .then(data => {})
-            .catch(err => logError(err));
-    }
+            // loop over each category of the lighthouse test and pull out the score and write some notes for each category
+            lhdata.reportCategories.map(category => {
+                let score = Math.ceil(category.score); // round the category score ot the nearest whole number
+                let pdfDataObj = {score, class: ""};
+                let metricDataObj = {name: category.name, grade: "", class: "", slug: category.name.toLowerCase().replace(/ /g, "-")};
+
+                if(category.score >= ratings.pass) {
+                    score = chalk.green.bold(score);
+
+                    pdfDataObj.class = "good";
+                } else if(category.score > ratings.fail && category.score <= ratings.pass) {
+                    score = chalk.yellow.bold(score);
+                    notes.push(`* Your score for the ${chalk.bgYellow.black.bold(`"${category.name}" metric needs improvement`)}. Please consult the ${formatFileName(`${unixTimeStamp}.report.html`)} file generated for a detailed breakdown on what to improve.`);
+
+                    pdfDataObj.class = "ok";
+                    metricDataObj.class = "ok";
+                    metricDataObj.grade = "needs improvement";
+                } else if(category.score <= ratings.fail) {
+                    score = chalk.red.bold(score);
+                    notes.push(`* Your score for the ${chalk.bgRed.white.bold(`"${category.name}" metric is poor`)}. Please consult the ${formatFileName(`${unixTimeStamp}.report.html`)} file generated for a detailed breakdown on how to improve it`);
+
+                    pdfDataObj.class = "poor";
+                    metricDataObj.class = "poor";
+                    metricDataObj.grade = "is poor";
+                }
+
+                if(category.score < ratings.pass) {
+                    metrics.push(metricDataObj);
+                }
+
+                pdf.addData(category.id.replace(/-/g, ""), pdfDataObj);
+
+                table.cell("Score", score);
+                table.cell("Metric", category.name);
+                table.newRow();
+            });
+
+            pdf.addData("metrics", metrics);
+
+            console.log(table.toString());
+            logMultilineMsg(notes);
+
+            // get the vulnerable libraries being used in the passed in URL
+            let vulnerabilities = lhdata.reportCategories[3].audits[9].result;
+
+            // if we have any vulnerable libraries used in the passed in url...the test name is "no vulnerable libraries"
+            if(!vulnerabilities.score) {
+
+                const vulnTable = new easyTable;
+
+                // add a line of padding between the notes and the vulnerabilities
+                logNewLine();
+
+                logMultilineMsg([
+                    `${chalk.cyan.bold("Included front-end JavaScript libraries with known security vulnerabilities:")}`,
+                    chalk.bgRed.bold.white(vulnerabilities.displayValue)
+                ]);
+
+                // add a line of padding between the number of vulnerabilities header and the vulnerabilites table
+                logNewLine();
+
+                let vulns = [];
+
+                vulnerabilities.extendedInfo.vulnerabilities.map(vuln => {
+                    let lib = `${vuln.name}@${vuln.version}`;
+                    let vulnCount = vuln.vulnCount;
+                    let url = vuln.pkgLink;
+                    let sev = vuln.highestSeverity;
+                    
+                    let vulnDataObj = {
+                        libraryVersion: lib,
+                        vulnCount,
+                        highestSeverity: sev,
+                        url
+                    };
+
+                    if(vuln.highestSeverity === "Medium") {
+                        lib = chalk.yellow.bold(lib);
+                        vulnCount = chalk.yellow.bold(vulnCount);
+                        url = chalk.yellow.bold.underline(vuln.pkgLink);
+                        sev = chalk.yellow.bold(sev);
+                    } else if(vuln.highestSeverity === "High") {
+                        lib = chalk.red.bold(lib);
+                        vulnCount = chalk.red.bold(vulnCount);
+                        url = chalk.red.bold.underline(url);
+                        sev = chalk.red.bold(sev);
+                    }
+
+                    vulns.push(vulnDataObj);
+
+                    vulnTable.cell("Library Version", lib);
+                    vulnTable.cell("Vulnerability Count", vulnCount);
+                    vulnTable.cell("Highest Severity", sev);
+                    vulnTable.cell("URL", url);
+                    vulnTable.newRow();
+                });
+
+                pdf.addData("vulns", {
+                    total: vulns.length,
+                    vulns
+                });
+                console.log(vulnTable.toString());
+            }
+
+            // Add a line of padding so that when the all method calls this function there will be space between this output and the next test output
+            logNewLine();
+
+            fs.unlink(`${unixTimeStamp}.report.json`, (err) => {})
+
+            if(typeof outputPath === "string" && outputPath !== "") {
+                console.log("Writing PDF of lighthouse report...\n")
+
+                pdf.generate("lighthouse", outputPath)
+                    .then(data => spinner.stop())
+                    .catch(err => {
+                        spinner.stop()
+
+                        logError(err)
+                    });
+            }
+        })
+    })
 }
 
 // opts: the command line options passed in
 // url: url to run test on
 async function observatory(opts, url) {
-
     pdf.addData("url", url);
     pdf.addData("host", urlFormatter.domainOnlyURL(url));
 
@@ -237,141 +262,50 @@ async function observatory(opts, url) {
         return;
     }
 
-    spinner.start();
+    const cmd = spawn('observatory', [
+        urlFormatter.domainOnlyURL(url),
+        '--format=json'
+    ])
 
-    const [err, resp] = await on(exec(`observatory ${urlFormatter.domainOnlyURL(url)} --format=json &>report-${unixTimeStamp}-observatory.json`));
+    cmd.stdout.on('data', (data) => {
+        // Parse the output as a string (its currently a Buffer)
+        data = data.toString()
 
-    if(err) {
-        spinner.stop().clear();
+        // Account for errors thrown by the command and innerrantly saved in JSON file
+        if(data.includes("observatory [ERROR]")) {
+            spinner.stop()
 
-        logError(err.message);
-    }
-    
-    // get the data on the various security rules not being followed from the generated JSON file
-    let [fileErr, contents] = await on(fs.readFileAsync(`report-${unixTimeStamp}-observatory.json`));
+            logError(data.replace("observatory [ERROR] ", ""));
 
-    if(fileErr) {
-        spinner.stop().clear();
+            return;
+        }
+        
+        const obsDataWithoutOverallScore = JSON.parse(data)
+        const overallScoreCMD = spawn('observatory', [
+            urlFormatter.domainOnlyURL(url),
+            '--format=csv'
+        ])
 
-        logError(fileErr.message);
-    }
+        overallScoreCMD.stdout.on('data', (dataWithOverallScore) => {
+            spinner.stop()
 
-    contents = contents.toString("utf8");
+            dataWithOverallScore = dataWithOverallScore.toString()
+        })
 
-    // account for errors thrown by the command and innerrantly saved in JSON file
-    if(contents.includes("observatory [ERROR]")) {
-        spinner.stop().clear();
+        overallScoreCMD.stderr.on('data', (data) => {
+            spinner.stop()
 
-        logError(contents.replace("observatory [ERROR] ", ""));
-    }
+            logError(data.toString())
 
-    // unfortunately the JSON output we got earlier doesn't include the test's overall score or grade...but this txt file will...
-    let [txtErr, txtContents] = await on(exec(`observatory ${urlFormatter.domainOnlyURL(url)} --format=csv &>report-${unixTimeStamp}-observatory.txt`));
+            return;
+        })
+    })
 
-    if(txtErr) {
-        spinner.stop().clear();
-
-        logError(txtErr.message);
-    }
-
-    spinner.stop().clear();
-
-    // create another little emoji spinner to display to the user while we parse all these test results
-    const resultsSpinner = ora({
-        text: "Formatting results...",
-        spinner: "earth"
-    });
-    resultsSpinner.start();
-
-    let [jsonErr, jsonContents] = await on(fs.readFileAsync(`report-${unixTimeStamp}-observatory.json`));
-
-    if(jsonErr) {
-        resultsSpinner.stop().clear();
-
-        logError(err.message);
-    }
-
-    jsonContents = jsonContents.toString("utf8");
-
-    resultsSpinner.stop().clear();
-    const lines = jsonContents.split("\n"),
-        filteredLines = lines.filter(line => !line.includes("observatory [WARN]")),
-        cleanData = filteredLines.join("\n"),
-        parsedData = JSON.parse(cleanData),
-        obsTable = new easyTable;
-
-    console.log(`${chalk.cyan.bold("\nMozilla Observatory Security Report: ")} ${url}`);
-
-    // add a line of padding between the test header and the results table
-    logNewLine();
-
-    let rules = [];
-    
-    // loop through each rule that the passed in URL didn't comply too
-    for(let prop in parsedData) {
-        const test = parsedData[prop];
-
-        obsTable.cell("Score", test.score_modifier);
-        obsTable.cell("Rule", chalk.red.bold(formatRuleName(test.name)));
-        obsTable.cell("Description", test.score_description);
-        obsTable.cell("Pass?", (test.pass ? chalk.green.bold("\u2714") : chalk.red.bold("\u2718")));
-        obsTable.newRow();
-
-        rules.push({
-            score: test.score_modifier,
-            slug: test.name,
-            desc: test.score_description,
-            isPassed: test.pass,
-            class: (test.pass ? "green" : "red")
-        });
-    }
-
-    pdf.addData("rules", rules);
-    console.log(obsTable.toString());
-
-    let [txtReadErr, txtReadContents] = await on(fs.readFileAsync(`report-${unixTimeStamp}-observatory.txt`));
-
-    if(txtReadErr) {
-        logError(err.message);
-    }
-
-    txtReadContents = txtReadContents.toString("utf8");
-
-    var txtLines = txtReadContents.split("\n"),
-        txtfilteredLines = txtLines.filter(line => (line.includes("Score: ") || line.includes("Grade: "))),
-        txtCleanData = txtfilteredLines.map(line => {
-            if(line.includes("Score: ")){
-                return line.replace("Score: ", "");
-            } else {
-                return line.replace("Grade: ", "");
-            }
-        });
-
-    pdf.addData("score", txtCleanData[0]);
-    pdf.addData("grade", txtCleanData[1]);
-
-    logMultilineMsg([
-        `${chalk.cyan.bold("Score: ")} ${txtCleanData[0]}`,
-        `${chalk.cyan.bold("Grade: ")} ${txtCleanData[1]}`
-    ]);
-
-    // add a line of padding betwen the score and the more details messages
-    logNewLine();
-
-    console.log(`For more details on the contents of each section of this report please check out the full report at ${formatFileName(`https://observatory.mozilla.org/analyze.html?host=${urlFormatter.domainOnlyURL(url)}`)}.`);
-    console.log(`Additionally please consult this page for answered to commonly asked questions about Mozilla's Observatory Security Report ${formatFileName("https://observatory.mozilla.org/faq.html")}.`);
-
-    // add a line of padding between the end of the test output and the begging of the next line in the cli
-    logNewLine();
-    
-    // delete the files we pulled all this data in so as not to bloat the users system with unecessary files
-    exec(`rm -rf report-${unixTimeStamp}-observatory.json report-${unixTimeStamp}-observatory.txt`);
-
-    if(typeof opts.file === "string" && opts.file !== "") {
-        pdf.generate("observatory", opts.file)
-            .then(data => {})
-            .catch(err => logError(err));
-    }
+    cmd.stderr.on('data', (data) => {
+        spinner.stop()
+        
+        logError(data.toString())
+    })
 }
 
 // opts: the command line options passed in
@@ -392,6 +326,5 @@ async function all(opts, url) {
 module.exports = {
     lighthouse,
     observatory,
-    pagespeed,
     all
 }

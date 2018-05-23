@@ -48,7 +48,7 @@ const {
     observatory,
     pagespeed,
     all
-} = require("./tests-new");
+} = require("./tests");
 
 // the url passed into the command, we're just defaulting it to an empty string and not null
 const url = argv._[0] || "";
