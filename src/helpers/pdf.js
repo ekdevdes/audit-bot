@@ -5,12 +5,6 @@ const pdf = require("phantom-html2pdf");
 // Get the current unix timestamp
 const unix = require("to-unix-timestamp");
 
-// Allows colorful console logs
-const chalk = require("chalk");
-
-// Used to exec cli commands like lighthouse and observatory
-const exec = require("shell-exec");
-
 // Used to expand a.b.c to {a: b: {c: ""}}
 const expandObject = require("expand-object");
 
@@ -25,14 +19,7 @@ const fs = bluebird.promisifyAll(require("fs"));
 const urlFormatter = require("./url");
 
 // Logs warnings and errors to the console using chalk.js for pretty errors
-const { 
-    logError,
-    formatFileName,
-    formatRuleName
-} = require("./logger");
-
-// Maps a test's score to its grade (e.g. 80 = fail, 70 = average, 60 = fail)
-const ratings = require("./ratings")();
+const { formatFileName, formatRuleName } = require("./logger");
 
 // A unique unix timestamp
 const unixTimeStamp = unix(new Date());
@@ -63,13 +50,6 @@ const fieldNames = {
         'section.obsRule'
     ],
     pagespeed: [],
-    all() {
-        let vals = [...this.lighthouse, ...this.observatory, ...this.pagespeed];
-
-        // remove the duplicates using a set
-        return [...new Set(vals)];
-        
-    },
     note: [
         'metric.name',
         'metric.grade',
@@ -113,8 +93,7 @@ function regexForSection(sectionName) {
     let validKeys = Object.keys(fieldNames);
 
     if(validKeys.includes(sectionName)) {
-        // fieldNames.all is a function but all the keys are simply objects, so we check to see if the value is a function and if so execute it
-        const replacements = (typeof fieldNames[sectionName] === "function") ? fieldNames[sectionName]() : fieldNames[sectionName];
+        const replacements = fieldNames[sectionName];
 
         replacements.map(val => {
             regex += `{{${val}}}|`

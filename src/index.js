@@ -3,12 +3,12 @@
 /* TODO: 
 
 v1
-Finish refactoring the observatory method to remove its dependency on shell-exec
-Integrate the google mobile friendliness test API into the lighthouse test
-Add page load speed to lighthouse output
+Debug why lighthouse pdfs aren't generating properly
+Add first meaningful paint, first interactive, consistently interactive and input latency to terminal output and PDF of lighthouse results (under a "Performance Breakdown" header or somthing)
 Make help docs (report --help) better (might have to use a different pkg than yargs for this)
 
 v2
+Integrate the google mobile friendliness test API into the lighthouse test
 HTTPS mixed content analysis that comes with lighthouse cli v2.9
 PageSpeed test that uses Google's pagespeed insights API
 */

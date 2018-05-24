@@ -1,6 +1,7 @@
 // Libraries
 const path = require("path");
 const { spawn } = require("child_process");
+const fs = require("fs");
 
 // Allows colorful console logs
 const chalk = require("chalk");
@@ -14,9 +15,8 @@ const easyTable = require("easy-table");
 // Get the current unix timestamp
 const unix = require("to-unix-timestamp");
 
-// Promisify thge "fs" module (http://bit.ly/2H77JXE)
-const fs = require("fs");
-
+// Run a function only once
+const once = require("once");
 
 // Local Libs
 // Run simple tests on urls (e.g whether its local or not, get only the domain)
@@ -245,7 +245,9 @@ async function lighthouse({ verbose, outputPath }, url) {
 
 // opts: the command line options passed in
 // url: url to run test on
-async function observatory(opts, url) {
+async function observatory({ verbose, outputPath }, url) {
+    const table = new easyTable;
+
     pdf.addData("url", url);
     pdf.addData("host", urlFormatter.domainOnlyURL(url));
 
@@ -257,7 +259,7 @@ async function observatory(opts, url) {
 
     // if the user passed in a localhost URL we'll simply tell them that observatory doesn't support localhost URLs and then stop execution of the function
     if(urlFormatter.isLocal(url)) {
-        logWarning("Localhost URL detected, Mozilla Observatory does not support localhost URLs, aborting test...");
+        logError("[TEST ABORTED] Mozilla Observatory does not support localhost URLs.");
 
         return;
     }
@@ -270,6 +272,7 @@ async function observatory(opts, url) {
     cmd.stdout.on('data', (data) => {
         // Parse the output as a string (its currently a Buffer)
         data = data.toString()
+        let dataWithOverallScore = "";
 
         // Account for errors thrown by the command and innerrantly saved in JSON file
         if(data.includes("observatory [ERROR]")) {
@@ -286,10 +289,76 @@ async function observatory(opts, url) {
             '--format=csv'
         ])
 
-        overallScoreCMD.stdout.on('data', (dataWithOverallScore) => {
+        overallScoreCMD.stdout.on('data', (data) => (dataWithOverallScore += data.toString()))
+
+        overallScoreCMD.stdout.on('close', () => {
+            data = JSON.parse(data)
+
             spinner.stop()
 
-            dataWithOverallScore = dataWithOverallScore.toString()
+            console.log(`${chalk.cyan.bold("\nMozilla Observatory Security Report: ")} ${urlFormatter.domainOnlyURL(url)}\n`);
+
+            let rules = []
+
+            for(let testName in data) {
+                const testData = data[testName]
+
+                table.cell("Score", testData.score_modifier);
+                table.cell("Rule", chalk.red.bold(formatRuleName(testData.name)));
+                table.cell("Description", testData.score_description);
+                table.cell("Pass?", (testData.pass ? chalk.green.bold("\u2714") : chalk.red.bold("\u2718")));
+                table.newRow();
+
+                rules.push({
+                    score: testData.score_modifier,
+                    slug: testData.name,
+                    desc: testData.score_description,
+                    isPassed: testData.pass,
+                    class: (testData.pass ? "green" : "red")
+                });
+            }
+
+            pdf.addData("rules", rules);
+            console.log(table.toString());
+
+            const [score, grade] = dataWithOverallScore.split("\n")
+                .filter(line => (line.includes("Score: ") || line.includes("Grade: ")))
+                .map(line => {
+                    if(line.includes("Score: ")){
+                        return line.replace("Score: ", "");
+                    } else {
+                        return line.replace("Grade: ", "");
+                    }
+                })
+            
+            pdf.addData("score", score);
+            pdf.addData("grade", grade);
+
+            logMultilineMsg([
+                `${chalk.cyan.bold("Score: ")} ${score}`,
+                `${chalk.cyan.bold("Grade: ")} ${grade}`
+            ]);
+        
+            // add a line of padding betwen the score and the more details messages
+            logNewLine();
+        
+            console.log(`For more details on the contents of each section of this report please check out the full report at ${formatFileName(`https://observatory.mozilla.org/analyze.html?host=${urlFormatter.domainOnlyURL(url)}`)}.`);
+            console.log(`Additionally please consult this page for answered to commonly asked questions about Mozilla's Observatory Security Report ${formatFileName("https://observatory.mozilla.org/faq.html")}.`);
+        
+            // add a line of padding between the end of the test output and the begging of the next line in the cli
+            logNewLine();
+
+            if(typeof outputPath === "string" && outputPath !== "") {
+                console.log("Writing PDF of observatory report...\n")
+
+                pdf.generate("observatory", outputPath)
+                    .then(data => spinner.stop())
+                    .catch(err => {
+                        spinner.stop()
+
+                        logError(err)
+                    });
+            }
         })
 
         overallScoreCMD.stderr.on('data', (data) => {
