@@ -230,7 +230,7 @@ async function lighthouse({ verbose, outputPath }, url) {
 
             if(typeof outputPath === "string" && outputPath !== "") {
                 console.log("Writing PDF of lighthouse report...\n")
-
+                
                 pdf.generate("lighthouse", outputPath)
                     .then(data => spinner.stop())
                     .catch(err => {

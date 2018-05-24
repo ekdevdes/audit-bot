@@ -106,12 +106,8 @@ function regexForSection(sectionName) {
     }
 }
 
-function isTest(testName) {
-    if(testName === "lighthouse") {
-        return !templateData.hasOwnProperty("rules");
-    } else if(testName === "observatory") {
-        return templateData.hasOwnProperty("rules");
-    }
+function isLighthouseTest() {
+    return templateData.hasOwnProperty("pathtolighthousereport");
 }
 
 // Public functions
@@ -181,8 +177,8 @@ async function generate(testName, pdfPath) {
         data.contents.vulns.list = vulnsList
         data.contents.vulns.item = vulnItem
         data.contents.obsRule.item = obsRuleItem
-    
-        if(isTest("lighthouse")) {
+        
+        if(isLighthouseTest()) {
             data.contents.test = data.contents.test.replace(regexForSection(testName), (match) => {
                 match = trimCurlyBraces(match)
 
@@ -267,7 +263,7 @@ async function generate(testName, pdfPath) {
                         break;
                 }
             })
-        } else if(isTest("observatory")) {
+        } else {
             data.contents.test = data.contents.test.replace(regexForSection(testName), (match) => {
                 match = trimCurlyBraces(match);
 
