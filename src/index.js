@@ -5,7 +5,7 @@
 v1
 Debug why lighthouse pdfs aren't generating properly
 Add first meaningful paint, first interactive, consistently interactive and input latency to terminal output and PDF of lighthouse results (under a "Performance Breakdown" header or somthing)
-Make help docs (report --help) better (might have to use a different pkg than yargs for this)
+Make help docs (report --help and and README) better (might have to use a different pkg than yargs for this)
 
 v2
 Integrate the google mobile friendliness test API into the lighthouse test
