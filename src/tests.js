@@ -15,9 +15,6 @@ const easyTable = require("easy-table");
 // Get the current unix timestamp
 const unix = require("to-unix-timestamp");
 
-// Run a function only once
-const once = require("once");
-
 // Local Libs
 // Run simple tests on urls (e.g whether its local or not, get only the domain)
 const urlFormatter = require("./helpers/url");
