@@ -107,6 +107,19 @@ async function lighthouse({ verbose, outputPath }, url) {
                 logNewLine();
             }
 
+            const colorizer = (num, text = "") => {
+                // if no text was passed in lets output the number, otherwise we'll output the text
+                const output = (text === "") ? num : text                
+
+                if(num >= ratings.pass) {
+                    return chalk.green.bold(output)
+                } else if(num > ratings.fail && num <= ratings.pass) {
+                    return chalk.yellow.bold(output)
+                } else if(num <= ratings.fail) {
+                    return chalk.red.bold(output);
+                }
+            }
+
             logMultilineMsg([
                 `${chalk.cyan.bold("\nGoogle Lighthouse Report")}: ${lhdata.url}\n`,
                 `All scores are out of 100. For more details on the contents of each section of this report please check out the full report at ${formatFileName(path.resolve(`./${unixTimeStamp}.report.html`))}.\n`
@@ -135,7 +148,7 @@ async function lighthouse({ verbose, outputPath }, url) {
                     metricDataObj.grade = "needs improvement";
                 } else if(category.score <= ratings.fail) {
                     score = chalk.red.bold(score);
-                    notes.push(`* Your score for the ${chalk.bgRed.white.bold(`"${category.name}" metric is poor`)}. Please consult the ${formatFileName(`${unixTimeStamp}.report.html`)} file generated for a detailed breakdown on how to improve it`);
+                    notes.push(`* Your score for the ${chalk.bgRed.white.bold(`"${category.name}" metric is poor`)}. Please consult the ${formatFileName(`${unixTimeStamp}.report.html`)} file generated for a detailed breakdown on how to improve it.`);
 
                     pdfDataObj.class = "poor";
                     metricDataObj.class = "poor";
@@ -222,6 +235,58 @@ async function lighthouse({ verbose, outputPath }, url) {
 
             // Add a line of padding so that when the all method calls this function there will be space between this output and the next test output
             logNewLine();
+
+            console.log(chalk.cyan.bold("Performance Summary"));
+
+            // Add a line of padding so that when the all method calls this function there will be space between this output and the next test output
+            logNewLine();
+
+            const perfTable = new easyTable;
+
+            // Gather the page performance metrics
+            let perfData = [
+                lhdata.audits["time-to-first-byte"],
+                lhdata.audits["first-meaningful-paint"], 
+                lhdata.audits["first-interactive"],
+                lhdata.audits["consistently-interactive"],
+                lhdata.audits["speed-index-metric"], 
+                lhdata.audits["estimated-input-latency"]
+            ]
+
+            // Loop over the performance data and extract only what we want
+            perfData = perfData.map(item => ({
+                name: item.name,
+                metric: item.description,
+                time: item.displayValue,
+                score: item.score,
+                scoringMode: item.scoringMode,
+                helpText: item.helpText.replace("[Learn more]", "").replace(".", "")
+            }))
+
+            perfData.forEach(item => {
+                perfTable.cell("Score", (item.scoringMode === "numeric" && item.name !== "time-to-first-byte") ? colorizer(item.score) : "–")
+                perfTable.cell("Time", (item.name === "time-to-first-byte") ? item.time : colorizer(item.score, item.time))
+                perfTable.cell("Metric", (item.name === "time-to-first-byte") ? item.metric : colorizer(item.score, item.metric))
+                perfTable.newRow()
+            })
+
+            console.log(perfTable.toString())
+
+            // Add a line of padding so that when the all method calls this function there will be space between this output and the next test output
+            logNewLine();
+
+            perfData.forEach(item => {
+                logMultilineMsg([
+                    chalk.cyan.bold(item.metric),
+                    `${item.helpText}\n`
+                ]);
+            });
+
+            // gather "link-blocking-first-paint" and "script-blocking-first-paint" from lhdata.reportCategories (where name = "performance") and
+            // id under .audits = "link-blocking-first-paint" or "script-blocking-first-paint"
+            const perfHints = [
+
+            ]
 
             fs.unlink(`${unixTimeStamp}.report.json`, (err) => {})
 

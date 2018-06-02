@@ -3,7 +3,7 @@
 /* TODO: 
 
 v1
-Add first meaningful paint, first interactive, consistently interactive and input latency to terminal output and PDF of lighthouse results (under a "Performance Breakdown" header or somthing)
+Add link and script performance hints to cli output, add performance summary and hints to pdf output
 Make help docs (report --help and and README) better (might have to use a different pkg than yargs for this)
 
 v2
