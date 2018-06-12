@@ -40,7 +40,8 @@ const fieldNames = {
         'scores.seo.score',
         'scores.seo.class',
         'section.notes',
-        'section.vulns'
+        'section.vulns',
+        'section.performance'
     ],
     observatory: [
         'url',
@@ -76,6 +77,14 @@ const fieldNames = {
         'vuln.vulnCount',
         'vuln.highestSeverity',
         'vuln.url'
+    ],
+    'section.performance': [
+        'perfItem'
+    ],
+    perfItem: [
+        'perf.score',
+        'perf.time',
+        'perf.metric'
     ]
 }
 
@@ -151,6 +160,10 @@ async function generate(testName, pdfPath) {
             },
             obsRule: {
                 item: ""
+            },
+            performance: {
+                list: "",
+                item: ""
             }
         }
     }
@@ -161,14 +174,18 @@ async function generate(testName, pdfPath) {
         fs.readFileAsync(path.resolve(__dirname, `../pdf-generation-template/blocks/vulns.html`), "utf8"),
         fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/note.html"), "utf8"),
         fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/vuln.html"), "utf8"),
-        fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/obsRule.html"), "utf8")
+        fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/obsRule.html"), "utf8"),
+        fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/performance.html"), "utf8"),
+        fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/perf-item.html"), "utf8")
     ]).then(([
         test, 
         notesList, 
         vulnsList, 
         noteItem, 
         vulnItem, 
-        obsRuleItem
+        obsRuleItem,
+        performance,
+        perfItem
     ]) => {
 
         data.contents.test = test
@@ -177,6 +194,8 @@ async function generate(testName, pdfPath) {
         data.contents.vulns.list = vulnsList
         data.contents.vulns.item = vulnItem
         data.contents.obsRule.item = obsRuleItem
+        data.contents.performance.list = performance
+        data.contents.performance.item = perfItem
         
         if(isLighthouseTest()) {
             data.contents.test = data.contents.test.replace(regexForSection(testName), (match) => {
