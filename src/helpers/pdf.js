@@ -1,6 +1,9 @@
 // Libraries
 const path = require("path");
-const pdf = require("phantom-html2pdf");
+const pdf = require("html-pdf");
+
+// Allows colorful console logs
+const chalk = require("chalk");
 
 // Get the current unix timestamp
 const unix = require("to-unix-timestamp");
@@ -84,7 +87,8 @@ const fieldNames = {
     perfItem: [
         'perf.score',
         'perf.time',
-        'perf.metric'
+        'perf.metric',
+        'perf.class'
     ]
 }
 
@@ -200,6 +204,7 @@ async function generate(testName, pdfPath) {
         if(isLighthouseTest()) {
             data.contents.test = data.contents.test.replace(regexForSection(testName), (match) => {
                 match = trimCurlyBraces(match)
+                // console.log('match', match)
 
                 switch (match) {
                     case "url":
@@ -209,7 +214,7 @@ async function generate(testName, pdfPath) {
                     case "section.notes":
                         let sectionContents = "";
 
-                        templateData.metrics.map(metric => {
+                        templateData.metrics.forEach(metric => {
                             sectionContents += data.contents.notes.item.replace(regexForSection("note"), (match) => {
                                 match = trimCurlyBraces(match)
 
@@ -239,7 +244,7 @@ async function generate(testName, pdfPath) {
                     case "section.vulns":
                         let theSectionContents = "";
 
-                        templateData.vulns.vulns.map(vuln => {
+                        templateData.vulns.vulns.forEach(vuln => {
                             theSectionContents += data.contents.vulns.item.replace(regexForSection("vuln"), (match) => {
                                 match = trimCurlyBraces(match)
 
@@ -272,6 +277,36 @@ async function generate(testName, pdfPath) {
                         })
 
                         return data.contents.vulns.list;
+
+                    case "section.performance":
+                        // // console.log('performance', performance)
+                        // console.log('templateData', templateData)
+                        // console.log('templateData.perfitems', templateData.perfitems)
+                        let perfSectionContents = "";
+
+                        templateData.perfitems.forEach(perfItem => {
+                            perfSectionContents += data.contents.performance.item.replace(regexForSection("perfItem"), match => {
+                                match = trimCurlyBraces(match)
+
+                                switch(match) {
+                                    case "perf.score":
+                                        return (perfItem.scoringMode === "numeric") ? perfItem.score : "-";
+                                    
+                                    case "perf.time": 
+                                        return perfItem.time;
+                                        
+                                    case "perf.metric":
+                                        return perfItem.metric;
+
+                                    case "perf.class":
+                                        return perfItem.class;
+                                }
+                            })
+                        })
+
+                        data.contents.performance.list = data.contents.performance.list.replace(regexForSection("section.performance"), perfSectionContents)
+
+                        return data.contents.performance.list;
 
                     default:
                         if(match.includes("scores.")) {
@@ -325,16 +360,17 @@ async function generate(testName, pdfPath) {
                 }
             })
         }
+        
+        // console.log('data.paths.htmlOutput', data.paths.htmlOutput)
+        // console.log('data.contents.test', data.contents.test)
+        // console.log('data.paths.pdfOutput', data.paths.pdfOutput)
 
         fs.writeFile(data.paths.htmlOutput, data.contents.test, "utf8", () => {
-            pdf.convert({html: data.paths.htmlOutput}, (err, result) => {
-                result.toFile(data.paths.pdfOutput, () => {
-                    console.log(`PDF of ${testName} report saved to: ${formatFileName(data.paths.pdfOutput)}.\n\n`)   
+            pdf.create(data.contents.test).toFile(data.paths.pdfOutput, (err, res) => {
+                console.log(chalk.green.bold(`PDF Generated at: ${res.filename}!`))
 
-                    // delete the temp html file
-                    fs.unlink(data.paths.htmlOutput, (err) => {})
-                })
-            })
+                fs.unlink(data.paths.htmlOutput, err => {})
+            });              
         })
 
     }).catch(err => {})

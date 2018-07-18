@@ -6,6 +6,7 @@
     <style>
         html, body {
             font-family: sans-serif;
+            font-size: 15px;
         }
 
         table {
@@ -86,12 +87,24 @@
         .perfItem {
             margin-bottom: 30px;
         }
+
+        .perfMetrics {
+            margin-bottom: 25px;
+        }
+
+        .perfDesc {
+            margin-bottom: 10px;
+        }
+
+        .perfMoreInfo {
+            margin-top: 0;
+        }
     </style>
 </head>
 <body>
     <header>
         <h1>Google Lighthouse Report: <a href="{{url}}">{{url}}</a></h1>
-        <p>All scores are out of 100. For more details on the contents of each section of this report please check out the full report at <a href="file://{{pathtolighthousereport}}"><strong>{{pathtolighthousereport}}</strong></a>.</p>
+        <p>All scores are out of 100. For more details on the contents of each section of this report please check out the full report <a href="file://{{pathtolighthousereport}}">here</a>.</p>
     </header>
     <table>
         <thead>

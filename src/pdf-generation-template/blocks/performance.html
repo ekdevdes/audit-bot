@@ -1,11 +1,22 @@
+<!-- trying to do a page break in the generated PDF -->
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<!-- end -->
+
 <section class="performance">
     <strong>Perfomance Summary:</strong>
     <table>
         <thead>
             <tr>
                 <th>Score</th>
-                <th>Vulnerability Count</th>
-                <th>Highest Severity</th>
+                <th>Time</th>
+                <th>Metric</th>
             </tr>
         </thead>
         <tbody>
@@ -15,33 +26,39 @@
 
     <div class="perfDescriptions">
         <div class="perfMetrics">
-            <p>Keep server response times low (TTFB)</p>
-            <p>Time To First Byte identifies the time at which your server sends a response (https://developers.google.com/web/tools/chrome-devtools/network-performance/issues).</p>
+            <p><strong>Keep server response times low (TTFB)</strong></p>
+            <p class="perfDesc">Time To First Byte identifies the time at which your server sends a response.</p>
+            <p class="perfMoreInfo"><a href="https://developers.google.com/web/tools/chrome-devtools/network-performance/issues">More Info.</a></p>
         </div>
 
         <div class="perfMetrics">
-            <p>First meaningful paint</p>
-            <p>First meaningful paint measures when the primary content of a page is visible (https://developers.google.com/web/tools/lighthouse/audits/first-meaningful-paint).</p>
+            <p><strong>First meaningful paint</strong></p>
+            <p class="perfDesc">First meaningful paint measures when the primary content of a page is visible.</p>
+            <p class="perfMoreInfo"><a href="https://developers.google.com/web/tools/lighthouse/audits/first-meaningful-paint">More Info.</a></p>
         </div>
 
         <div class="perfMetrics">
-            <p>First Interactive (beta)</p>
-            <p>First Interactive marks the time at which the page is minimally interactive (https://developers.google.com/web/tools/lighthouse/audits/first-interactive).</p>
+            <p><strong>First Interactive (beta)</strong></p>
+            <p class="perfDesc">First Interactive marks the time at which the page is minimally interactive.</p>
+            <p class="perfMoreInfo"><a href="https://developers.google.com/web/tools/lighthouse/audits/first-interactive">More Info.</a></p>
         </div>
 
         <div class="perfMetrics">
-            <p>Consistently Interactive (beta)</p>
-            <p>Consistently Interactive marks the time at which the page is fully interactive (https://developers.google.com/web/tools/lighthouse/audits/consistently-interactive).</p>
+            <p><strong>Consistently Interactive (beta)</strong></p>
+            <p class="perfDesc">Consistently Interactive marks the time at which the page is fully interactive.</p>
+            <p class="perfMoreInfo"><a href="https://developers.google.com/web/tools/lighthouse/audits/consistently-interactive">More Info.</a></p>
         </div>
 
         <div class="perfMetrics">
-            <p>Perceptual Speed Index</p>
-            <p>Speed Index shows how quickly the contents of a page are visibly populated (https://developers.google.com/web/tools/lighthouse/audits/speed-index).</p>
+            <p><strong>Perceptual Speed Index</strong></p>
+            <p class="perfDesc">Speed Index shows how quickly the contents of a page are visibly populated.</p>
+            <p class="perfMoreInfo"><a href="https://developers.google.com/web/tools/lighthouse/audits/speed-index">More Info.</a></p>
         </div>
 
         <div class="perfMetrics">
-            <p>Estimated Input Latency</p>
-            <p>The score above is an estimate of how long your app takes to respond to user input, in milliseconds There is a 90% probability that a user encounters this amount of latency, or less. 10% of the time a user can expect additional latency. If your latency is higher than 50 ms, users may perceive your app as laggy. (https://developers.google.com/web/tools/lighthouse/audits/estimated-input-latency).</p>
+            <p><strong>Estimated Input Latency</strong></p>
+            <p class="perfDesc">The score above is an estimate of how long your app takes to respond to user input, in milliseconds There is a 90% probability that a user encounters this amount of latency, or less. 10% of the time a user can expect additional latency. If your latency is higher than 50 ms, users may perceive your app as laggy.</p>
+            <p class="perfMoreInfo"><a href="https://developers.google.com/web/tools/lighthouse/audits/estimated-input-latency">More Info.</a></p>
         </div>
     </div>
 </section>

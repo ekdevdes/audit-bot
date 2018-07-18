@@ -253,15 +253,28 @@ async function lighthouse({ verbose, outputPath }, url) {
                 lhdata.audits["estimated-input-latency"]
             ]
 
+            const classifier = score => {
+                if(score >= ratings.pass) {
+                    return "good"
+                } else if(score >= ratings.average && score < ratings.pass) {
+                    return "ok"
+                } else {
+                    return "poor"
+                }
+            }
+
             // Loop over the performance data and extract only what we want
             perfData = perfData.map(item => ({
                 name: item.name,
                 metric: item.description,
                 time: item.displayValue,
                 score: item.score,
+                class: (item.scoringMode === "numeric") ? classifier(item.score) : "",
                 scoringMode: item.scoringMode,
                 helpText: item.helpText.replace("[Learn more]", "").replace(".", "")
             }))
+
+            pdf.addData("perfItems", perfData)
 
             perfData.forEach(item => {
                 perfTable.cell("Score", (item.scoringMode === "numeric" && item.name !== "time-to-first-byte") ? colorizer(item.score) : "–")
