@@ -3,16 +3,9 @@ const path = require("path");
 const { spawn } = require("child_process");
 const fs = require("fs");
 
-// Allows colorful console logs
 const chalk = require("chalk");
-
-// Colorful cli spinners
 const ora = require("ora");
-
-// Easily output tables in the cli
 const easyTable = require("easy-table");
-
-// Get the current unix timestamp
 const unix = require("to-unix-timestamp");
 
 // Local Libs
@@ -20,7 +13,7 @@ const unix = require("to-unix-timestamp");
 const urlFormatter = require("./helpers/url");
 
  // Logs warnings and errors to the console using chalk.js for pretty errors
-const { 
+const {
     logWarning,
     logError,
     formatFileName,
@@ -69,7 +62,7 @@ async function lighthouse({ verbose, outputPath }, url) {
             console.log(data.toString())
         }
     })
-    
+
     cmd.stderr.on('data', (data) => {
         spinner.stop()
 
@@ -91,7 +84,7 @@ async function lighthouse({ verbose, outputPath }, url) {
 
         fs.readFile(`${unixTimeStamp}.report.json`, 'utf8', (err, data) => {
             resultsSpinner.stop()
-            
+
             if(err) {
                 logError(err.message)
 
@@ -109,7 +102,7 @@ async function lighthouse({ verbose, outputPath }, url) {
 
             const colorizer = (num, text = "") => {
                 // if no text was passed in lets output the number, otherwise we'll output the text
-                const output = (text === "") ? num : text                
+                const output = (text === "") ? num : text
 
                 if(num >= ratings.pass) {
                     return chalk.green.bold(output)
@@ -197,7 +190,7 @@ async function lighthouse({ verbose, outputPath }, url) {
                     let vulnCount = vuln.vulnCount;
                     let url = vuln.pkgLink;
                     let sev = vuln.highestSeverity;
-                    
+
                     let vulnDataObj = {
                         libraryVersion: lib,
                         vulnCount,
@@ -246,10 +239,10 @@ async function lighthouse({ verbose, outputPath }, url) {
             // Gather the page performance metrics
             let perfData = [
                 lhdata.audits["time-to-first-byte"],
-                lhdata.audits["first-meaningful-paint"], 
+                lhdata.audits["first-meaningful-paint"],
                 lhdata.audits["first-interactive"],
                 lhdata.audits["consistently-interactive"],
-                lhdata.audits["speed-index-metric"], 
+                lhdata.audits["speed-index-metric"],
                 lhdata.audits["estimated-input-latency"]
             ]
 
@@ -305,7 +298,7 @@ async function lighthouse({ verbose, outputPath }, url) {
 
             if(typeof outputPath === "string" && outputPath !== "") {
                 console.log("Writing PDF of lighthouse report...\n")
-                
+
                 pdf.generate("lighthouse", outputPath)
                     .then(data => spinner.stop())
                     .catch(err => {
@@ -330,7 +323,7 @@ async function observatory({ verbose, outputPath }, url) {
     const spinner = ora({
         text: "Running observatory tests...",
         spinner: "moon"
-    }); 
+    });
 
     // if the user passed in a localhost URL we'll simply tell them that observatory doesn't support localhost URLs and then stop execution of the function
     if(urlFormatter.isLocal(url)) {
@@ -357,7 +350,7 @@ async function observatory({ verbose, outputPath }, url) {
 
             return;
         }
-        
+
         const obsDataWithoutOverallScore = JSON.parse(data)
         const overallScoreCMD = spawn('observatory', [
             urlFormatter.domainOnlyURL(url),
@@ -405,7 +398,7 @@ async function observatory({ verbose, outputPath }, url) {
                         return line.replace("Grade: ", "");
                     }
                 })
-            
+
             pdf.addData("score", score);
             pdf.addData("grade", grade);
 
@@ -413,13 +406,13 @@ async function observatory({ verbose, outputPath }, url) {
                 `${chalk.cyan.bold("Score: ")} ${score}`,
                 `${chalk.cyan.bold("Grade: ")} ${grade}`
             ]);
-        
+
             // add a line of padding betwen the score and the more details messages
             logNewLine();
-        
+
             console.log(`For more details on the contents of each section of this report please check out the full report at ${formatFileName(`https://observatory.mozilla.org/analyze.html?host=${urlFormatter.domainOnlyURL(url)}`)}.`);
             console.log(`Additionally please consult this page for answered to commonly asked questions about Mozilla's Observatory Security Report ${formatFileName("https://observatory.mozilla.org/faq.html")}.`);
-        
+
             // add a line of padding between the end of the test output and the begging of the next line in the cli
             logNewLine();
 
@@ -447,7 +440,7 @@ async function observatory({ verbose, outputPath }, url) {
 
     cmd.stderr.on('data', (data) => {
         spinner.stop()
-        
+
         logError(data.toString())
     })
 }

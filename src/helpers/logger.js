@@ -1,4 +1,4 @@
-const chalk = require("chalk"); // allows colorful console logs
+const chalk = require("chalk");
 
 // Logging helper functions
 function logWarning(msg) {
@@ -29,14 +29,14 @@ function formatRuleName(ruleSlug) {
 
         for(var i = 0; i < parts.length; i++) {
             const part = parts[i];
-          
+
           if(i === 0) {
-              result += `${part.toUpperCase()}-`; 
+              result += `${part.toUpperCase()}-`;
           } else {
               let newPart = (part === "xss") ?  ("XSS") : (part.charAt(0).toUpperCase() + part.slice(1));
               result += `${newPart}-`;
           }
-        }            
+        }
 
         result = result.substring(0, result.length - 1);
 

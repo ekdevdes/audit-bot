@@ -10,7 +10,6 @@
     "url": "https://github.com/ekdevdes/audit-cli.git"
   },
   "dependencies": {
-    "await-handler": "^1.1.0",
     "axios": "^0.17.1",
     "bluebird": "^3.5.1",
     "chalk": "^2.3.0",
@@ -26,5 +25,10 @@
   },
   "bin": {
     "rpt": "./src/index.js"
+  },
+  "devDependencies": {
+    "eslint": "^5.8.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-import": "^2.14.0"
   }
 }

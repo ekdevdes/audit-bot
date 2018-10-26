@@ -1,20 +1,11 @@
 // Libraries
 const path = require("path");
+
 const pdf = require("html-pdf");
-
-// Allows colorful console logs
 const chalk = require("chalk");
-
-// Get the current unix timestamp
 const unix = require("to-unix-timestamp");
-
-// Used to expand a.b.c to {a: b: {c: ""}}
 const expandObject = require("expand-object");
-
-// Library for "promisifying" all functions of a module
 const bluebird = require("bluebird");
-
-// Promisify thge "fs" module (http://bit.ly/2H77JXE)
 const fs = bluebird.promisifyAll(require("fs"));
 
 // Local Libs
@@ -127,7 +118,7 @@ function isLighthouseTest() {
 // adds a piece of data to an internal object that will ultimately be used to fill in template data
 function addData(key, data) {
    key = key.toString().toLowerCase();
-   
+
    const lighthouseAudits = ["pwa", "performance", "accessibility", "bestpractices", "seo"];
 
    if(lighthouseAudits.includes(key)) {
@@ -135,7 +126,7 @@ function addData(key, data) {
 
        expandedObject.scores[key].class = data.class;
        expandedObject.scores[key].score = data.score;
-   
+
        let newScoresValue = Object.assign(templateData.scores, expandedObject.scores);
 
        templateData.scores = newScoresValue;
@@ -182,11 +173,11 @@ async function generate(testName, pdfPath) {
         fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/performance.html"), "utf8"),
         fs.readFileAsync(path.resolve(__dirname, "../pdf-generation-template/blocks/perf-item.html"), "utf8")
     ]).then(([
-        test, 
-        notesList, 
-        vulnsList, 
-        noteItem, 
-        vulnItem, 
+        test,
+        notesList,
+        vulnsList,
+        noteItem,
+        vulnItem,
         obsRuleItem,
         performance,
         perfItem
@@ -200,7 +191,7 @@ async function generate(testName, pdfPath) {
         data.contents.obsRule.item = obsRuleItem
         data.contents.performance.list = performance
         data.contents.performance.item = perfItem
-        
+
         if(isLighthouseTest()) {
             data.contents.test = data.contents.test.replace(regexForSection(testName), (match) => {
                 match = trimCurlyBraces(match)
@@ -221,13 +212,13 @@ async function generate(testName, pdfPath) {
                                 switch (match) {
                                     case "metric.class":
                                         return metric.class;
-    
+
                                     case "metric.name":
                                         return metric.name;
-    
+
                                     case "metric.grade":
                                         return metric.grade;
-    
+
                                     case "pathtolighthousereport":
                                         return templateData.pathtolighthousereport;
 
@@ -270,7 +261,7 @@ async function generate(testName, pdfPath) {
                             switch (match) {
                                 case "vuln":
                                     return theSectionContents;
-                                
+
                                 case "vuln.counts":
                                     return templateData.vulns.total;
                             }
@@ -291,10 +282,10 @@ async function generate(testName, pdfPath) {
                                 switch(match) {
                                     case "perf.score":
                                         return (perfItem.scoringMode === "numeric") ? perfItem.score : "-";
-                                    
-                                    case "perf.time": 
+
+                                    case "perf.time":
                                         return perfItem.time;
-                                        
+
                                     case "perf.metric":
                                         return perfItem.metric;
 
@@ -360,7 +351,7 @@ async function generate(testName, pdfPath) {
                 }
             })
         }
-        
+
         // console.log('data.paths.htmlOutput', data.paths.htmlOutput)
         // console.log('data.contents.test', data.contents.test)
         // console.log('data.paths.pdfOutput', data.paths.pdfOutput)
@@ -370,7 +361,7 @@ async function generate(testName, pdfPath) {
                 console.log(chalk.green.bold(`PDF Generated at: ${res.filename}!`))
 
                 fs.unlink(data.paths.htmlOutput, err => {})
-            });              
+            });
         })
 
     }).catch(err => {})
