@@ -2,21 +2,9 @@
                 
 [![Known Vulnerabilities](https://snyk.io/test/github/ekdevdes/audit-bot/badge.svg?targetFile=package.json)](https://snyk.io/test/github/ekdevdes/audit-bot?targetFile=package.json)
 
-A command line tool that allows to run Google Lighthouse and Mozilla Observatory tests for security, best practices, SEO, PWA compliance, and accesibility on local and public urls
+A bot to audit the performance, best practices, accessiblity, SEO, PWA and security of your site. You can set it up so that it only runs on a few of the categories and only fails your PR based on unmet requirements that you specify. 
 
-### Options
-
-#### --verbose, -v
-Output detailed logs of the current stage of the lighthouse test
-
-#### --test=[lighthouse|observatory], -t [lighthouse|observatory]
-`--test=lighthouse` will only run the lighthouse test and not the mozilla observatory security test and `--test=observatory` will only run the mozilla observatory security test
-
-#### --help
-Shows the help documentation for this command
-
-#### --version
-Outputs the version number of currently installed version of the command (latest is 1.0.0)
+More info coming soon.
 
 ## The License
 
