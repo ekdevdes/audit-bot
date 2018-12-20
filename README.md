@@ -1,53 +1,8 @@
-# audit-cmd
+# audit-bot
                 
-[![Known Vulnerabilities](https://snyk.io/test/github/ekdevdes/audit-cli/badge.svg?targetFile=package.json)](https://snyk.io/test/github/ekdevdes/audit-cli?targetFile=package.json)
+[![Known Vulnerabilities](https://snyk.io/test/github/ekdevdes/audit-bot/badge.svg?targetFile=package.json)](https://snyk.io/test/github/ekdevdes/audit-bot?targetFile=package.json)
 
 A command line tool that allows to run Google Lighthouse and Mozilla Observatory tests for security, best practices, SEO, PWA compliance, and accesibility on local and public urls
-
-## Installation
-
-`npm i -g audit-cli`
-
-## Usage
-*&lt;url&gt;* is required, options are....well, optional.<br><br>
-
-<pre>
-report &lt;url&gt; [options]
-</pre>
-Runs both a Google Lighthouse and Mozilla Observatory Security report<br><br>
-
-<pre>
-report http://localhost:3030 --verbose
-report http://localhost:3030 -v
-</pre>
-Runs both a Google Lighthouse and Mozilla Observatory Security report using verbose output for lighthouse<br><br>
-
-<pre>
-report http://google.com
-</pre>
-Runs only a Google Lighthouse report using verbose output for lighthouse<br><br>
-
-<pre>
-report http://localhost:8888 --verbose --test=lighthouse
-report http://localhost:8888 -vt lighthouse
-</pre>
-Runs only a Google Lighthouse report using verbose output for lighthouse<br><br>
-
-<pre>
-report http://instagram.com --test=observatory
-report http://instagram.com -t observatory
-</pre>
-Runs only a Mozilla Observatory Security report<br><br>
-
-<pre>
-report http://example.localhost.com:3000 -t lighthouse
-</pre>
-Runs only a Google Lighthouse report<br><br>
-
-<pre>
-report http://example.localhost.com:3000 -ft lighthouse
-</pre>
-Runs only a Google Lighthouse report and saves a PDF of the terminal output to the directory the command is run from<br><br>
 
 ### Options
 
