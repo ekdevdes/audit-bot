@@ -1,6 +1,6 @@
 # audit-bot
                 
- [![Known Vulnerabilities](https://snyk.io/test/github/ekdevdes/audit-bot/badge.svg?style=flat-square)](https://snyk.io/test/github/ekdevdes/audit-bot)
+[![Known Vulnerabilities](https://snyk.io/test/github/ekdevdes/audit-bot/badge.svg?style=flat-square&targetFile=package.json)](https://snyk.io/test/github/ekdevdes/audit-bot?targetFile=package.json)
 
 A bot to audit the performance, best practices, accessiblity, SEO, PWA and security of your site. You can set it up so that it only runs on a few of the categories and only fails your PR based on unmet requirements that you specify. 
 
