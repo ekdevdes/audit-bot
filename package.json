@@ -1,0 +1,34 @@
+{
+  "name": "audit-bot",
+  "version": "1.0.0",
+  "description": "A bot to audit the performance, best practices, accessiblity, SEO, PWA and security of your site.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ekdevdes/audit-bot.git"
+  },
+  "keywords": [
+    "lighthouse",
+    "security",
+    "performance",
+    "best practices",
+    "PWA",
+    "SEO",
+    "bot",
+    "Github",
+    "Slack"
+  ],
+  "contributors": [
+    "Ethan Kramer <ethankr@me.com> (http://ethankr.me)",
+    "Timothy McKyer"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ekdevdes/audit-bot/issues"
+  },
+  "homepage": "https://github.com/ekdevdes/audit-bot#readme",
+  "devDependencies": {
+    "eslint": "^5.8.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-import": "^2.14.0"
+  }
+}
