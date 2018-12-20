@@ -4,7 +4,7 @@
 
 A bot to audit the performance, best practices, accessiblity, SEO, PWA and security of your site. You can set it up so that it only runs on a few of the categories and only fails your PR based on unmet requirements that you specify. 
 
-More info coming soon.
+_More info coming soon._
 
 ## The License
 
