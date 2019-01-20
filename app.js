@@ -1,4 +1,4 @@
-use strict';
+'use strict';
 
 const Hapi = require('hapi');
 const dotenv = require('dotenv').config();
