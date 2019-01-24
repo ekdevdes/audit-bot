@@ -19,7 +19,7 @@
   ],
   "contributors": [
     "Ethan Kramer <ethankr@me.com> (http://ethankr.me)",
-    "Timothy McKyer"
+    "Timothy McKyer <constsync.tim@gmail.com> (https://constsync.github.io/portfolio/)"
   ],
   "license": "MIT",
   "bugs": {
@@ -30,5 +30,10 @@
     "eslint": "^5.8.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-import": "^2.14.0"
+  },
+  "dependencies": {
+    "@slack/client": "^4.8.0",
+    "dotenv": "^6.2.0",
+    "hapi": "^17.8.1"
   }
 }
