@@ -5,4 +5,4 @@ ignore: {}
 patch:
   SNYK-JS-AXIOS-174505:
     - '@slack/client > axios':
-        patched: '2019-05-06T14:30:29.255Z'
+        patched: '2019-05-06T03:17:12.953Z
