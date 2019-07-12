@@ -4,5 +4,5 @@ ignore: {}
 # patches apply the minimum changes required to fix a vulnerability
 patch:
   SNYK-JS-AXIOS-174505:
-    - '@slack/client > axios':
-        patched: '2019-05-06T03:17:12.953Z
+    - axios:
+        patched: '2019-05-06T14:28:36.290Z'
