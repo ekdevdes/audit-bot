@@ -28,6 +28,7 @@ patch:
     - snyk > @snyk/dep-graph > graphlib > lodash:
         patched: '2019-07-12T11:33:41.217Z'
 <<<<<<< HEAD
+<<<<<<< HEAD
   SNYK-JS-LODASH-567746:
     - snyk > @snyk/dep-graph > lodash:
         patched: '2020-05-01T05:57:13.012Z'
@@ -51,8 +52,11 @@ patch:
         patched: '2020-05-01T05:57:13.012Z'
     - snyk > snyk-php-plugin > @snyk/composer-lockfile-parser > lodash:
         patched: '2020-05-01T05:57:13.012Z'
-=======
   SNYK-JS-TREEKILL-536781:
     - snyk > snyk-sbt-plugin > tree-kill:
         patched: '2019-12-12T05:56:34.471Z'
->>>>>>> snyk-fix-0435983abdec58a693507e3590bf4122
+  SNYK-JS-HTTPSPROXYAGENT-469131:
+    - snyk > proxy-agent > https-proxy-agent:
+        patched: '2019-10-04T05:56:17.866Z'
+    - snyk > proxy-agent > pac-proxy-agent > https-proxy-agent:
+        patched: '2019-10-04T05:56:17.866Z'
