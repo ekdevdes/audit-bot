@@ -32,7 +32,7 @@
     "eslint-plugin-import": "^2.14.0"
   },
   "dependencies": {
-    "@slack/client": "^4.8.0",
+    "@slack/client": "^5.0.0",
     "dotenv": "^6.2.0",
     "hapi": "^17.8.1",
     "snyk": "^1.231.0"
