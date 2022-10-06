@@ -35,7 +35,7 @@
     "@slack/client": "^5.0.0",
     "dotenv": "^6.2.0",
     "hapi": "^17.8.1",
-    "snyk": "^1.231.0"
+    "snyk": "^1.996.0"
   },
   "scripts": {
     "snyk-protect": "snyk protect",
