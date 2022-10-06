@@ -19,7 +19,7 @@
     "ora": "^1.3.0",
     "to-unix-timestamp": "^1.0.1",
     "yargs": "^16.0.0",
-    "snyk": "^1.518.0"
+    "snyk": "^1.996.0"
   },
   "scripts": {
     "preinstall": "npm i -g observatory-cli lighthouse",
